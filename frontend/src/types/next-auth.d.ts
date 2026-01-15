@@ -22,3 +22,8 @@ declare module 'next-auth/jwt' {
     // Add other custom properties here
   }
 }
+
+
+export type AppPropsWithSession = AppProps<{
+  session: Session | null;
+}>;
