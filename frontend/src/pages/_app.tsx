@@ -1,10 +1,5 @@
-import type { AppProps } from "next/app";
 import { SessionProvider } from "next-auth/react";
-import type { Session } from "next-auth";
-
-type AppPropsWithSession = AppProps<{
-  session: Session | null;
-}>;
+import type { AppPropsWithSession } from "@/types/next-auth"
 
 export default function App({
   Component,
