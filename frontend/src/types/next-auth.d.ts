@@ -18,12 +18,9 @@ declare module 'next-auth' {
 declare module 'next-auth/jwt' {
   /** Returned by the `jwt` callback */
   interface JWT {
-    id: string;
+    id?: string;
     // Add other custom properties here
   }
 }
 
-
-export type AppPropsWithSession = AppProps<{
-  session: Session | null;
-}>;
+export {};
