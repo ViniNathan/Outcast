@@ -28,7 +28,7 @@ export const SystemInterface: React.FC<SystemInterfaceProps> = ({ onAwaken }) =>
         
         <div className="max-w-xl">
           <p className="text-zinc-500 text-lg md:text-xl font-mono border-l-2 border-zinc-800 pl-4 py-1 mt-8">
-            OUTCAST transforma sua vida em um sistema de progressão real. <br />
+            <span className="text-red-700">OUTCAST</span> transforma sua vida em um sistema de progressão real. <br />
             <span className="text-zinc-400">Missões. Ranking. Consequências.</span>
           </p>
         </div>
