@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { MISSION_LOGS, SYSTEM_MESSAGES } from '../constants';
+import { MISSION_LOGS, SYSTEM_MESSAGES } from '../utils/constants';
 import { ArrowDown, Radio, Activity, Lock, AlertTriangle } from 'lucide-react';
 
 export const SystemInterface: React.FC = () => {

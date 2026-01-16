@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BOOT_SEQUENCE } from '@/constants';
+import { BOOT_SEQUENCE } from '@/utils/constants';
 
 interface TerminalEntryProps {
   onComplete: () => void;
