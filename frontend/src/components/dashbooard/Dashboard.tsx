@@ -524,9 +524,9 @@ export const Dashboard: React.FC = () => {
       </main>
 
       {/* SYSTEM TICKER */}
-      <div className="fixed bottom-0 right-0 w-full md:w-auto md:max-w-sm bg-black border-t md:border-l md:border-t border-zinc-900 p-2 z-50">
-         <div className="font-mono text-[10px] text-zinc-600 h-6 overflow-hidden flex items-center">
-            <span className="mr-2 text-green-900">{`>`}</span>
+      <div className="fixed bottom-0 right-0 w-full md:w-auto md:max-w-sm bg-black border-t md:border-l md:border-t border-red-900 p-2 z-50">
+         <div className="font-mono text-[10px] text-red-600 h-6 overflow-hidden flex items-center">
+            <span className="mr-2 text-red-900">{`>`}</span>
             <span className="animate-pulse">
               {activeTab === 'ORACLE' ? 'CONEXÃO NEURAL ESTABELECIDA...' : 'Monitoramento do sistema ativo...'}
             </span>
