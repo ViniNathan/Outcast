@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { PlayerStat, Quest, ChatMessage, RankEntry } from '../types';
+import { PlayerStat, Quest, ChatMessage, RankEntry } from '@/types/dashboard';
 import { 
   User, AlertTriangle, Check, Trophy, MessageSquare, 
-  Activity, Settings, Send, Lock, Cpu, ChevronRight 
+  Activity, Settings, Send, Lock, Cpu, Share2 
 } from 'lucide-react';
 
 // --- DATA CONSTANTS ---
@@ -250,6 +250,74 @@ export const Dashboard: React.FC = () => {
         <p className="text-zinc-500 font-mono text-sm mt-1">Comparando seu poder insignificante com a elite.</p>
       </div>
 
+      {/* SHARE CARD SECTION */}
+      <div className="mb-12 grid grid-cols-1 md:grid-cols-2 gap-8 items-center bg-zinc-900/10 p-6 border border-zinc-800/50">
+         
+         {/* THE CARD */}
+         <div className="relative aspect-[1.58/1] bg-black border border-zinc-800 p-6 flex flex-col justify-between overflow-hidden group hover:border-red-900/50 transition-colors shadow-2xl">
+            {/* Background Texture */}
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(220,38,38,0.15),_transparent_60%)]" />
+            <div className="absolute -right-10 -top-10 text-zinc-900/20 rotate-12 transform scale-150 pointer-events-none">
+               <Trophy size={200} />
+            </div>
+
+            <div className="relative z-10 flex justify-between items-start">
+               <div>
+                  <div className="flex items-center gap-2 mb-2">
+                     <span className="w-2 h-2 bg-red-600 animate-pulse" />
+                     <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-[0.2em]">System ID Card</span>
+                  </div>
+                  <h3 className="text-2xl md:text-3xl font-black text-zinc-100 uppercase tracking-tighter">{playerName}</h3>
+                  <p className="text-xs font-mono text-red-500 uppercase tracking-wider mt-1">{playerTitle}</p>
+               </div>
+               <div className="text-right">
+                  <div className="text-5xl font-black text-zinc-800/50 group-hover:text-red-900/20 transition-colors">E</div>
+               </div>
+            </div>
+
+            <div className="relative z-10 grid grid-cols-3 gap-4 border-t border-zinc-900 pt-4 mt-4">
+               <div>
+                  <span className="block text-[8px] font-mono text-zinc-600 uppercase">Nível</span>
+                  <span className="text-xl font-mono text-zinc-300">01</span>
+               </div>
+               <div>
+                  <span className="block text-[8px] font-mono text-zinc-600 uppercase">Classe</span>
+                  <span className="text-xl font-mono text-zinc-500">NONE</span>
+               </div>
+               <div>
+                  <span className="block text-[8px] font-mono text-zinc-600 uppercase">Rank</span>
+                  <span className="text-xl font-mono text-red-600">E</span>
+               </div>
+            </div>
+
+            <div className="relative z-10 mt-4 bg-zinc-950/80 p-3 border-l-2 border-red-900">
+               <p className="text-[10px] md:text-xs font-mono text-zinc-400 italic">
+                 &quot;O sistema não aceita fraqueza. Evolua ou morra.&quot;
+               </p>
+            </div>
+         </div>
+
+         {/* ACTIONS */}
+         <div className="space-y-6">
+            <div>
+               <h3 className="text-lg font-bold text-zinc-200 uppercase flex items-center gap-2">
+                 <Share2 size={18} className="text-red-600" />
+                 Viralização
+               </h3>
+               <p className="text-sm text-zinc-500 font-mono mt-2 leading-relaxed">
+                 Exporte seu card de caçador. Mostre ao mundo seu rank atual. A vergonha pública é um excelente combustível.
+               </p>
+            </div>
+            
+            <button className="w-full py-4 bg-white text-black font-bold uppercase tracking-widest text-xs hover:bg-zinc-200 transition-colors flex items-center justify-center gap-2">
+               <Share2 size={14} /> Compartilhar Status
+            </button>
+            <p className="text-[10px] text-zinc-700 font-mono text-center">
+               Gera uma imagem otimizada para Stories/Twitter.
+            </p>
+         </div>
+      </div>
+
       <div className="border border-zinc-800 bg-black">
         <div className="grid grid-cols-12 gap-4 p-4 border-b border-zinc-800 bg-zinc-900/50 text-[10px] font-mono text-zinc-500 uppercase tracking-widest">
           <div className="col-span-2">Rank</div>
@@ -398,7 +466,7 @@ export const Dashboard: React.FC = () => {
     <div className="w-full max-w-7xl mx-auto px-4 md:px-6 py-12 md:py-16">
       
       {/* TOP NAVIGATION */}
-      <nav className="flex justify-center mb-12 border-b border-zinc-900">
+      <nav className="fixed top-5 w-full left-0 right-0 z-50 flex justify-center border-b border-zinc-900 bg-black/90 backdrop-blur supports-[backdrop-filter]:bg-black/70">
          <div className="flex gap-1 md:gap-8">
             <button 
               onClick={() => setActiveTab('STATUS')}
@@ -448,7 +516,7 @@ export const Dashboard: React.FC = () => {
       </nav>
 
       {/* CONTENT AREA */}
-      <main className="min-h-[600px]">
+      <main className="min-h-[600px] pt-12">
         {activeTab === 'STATUS' && renderStatus()}
         {activeTab === 'RANKING' && renderRanking()}
         {activeTab === 'ORACLE' && renderOracle()}
