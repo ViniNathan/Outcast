@@ -36,7 +36,7 @@ export const TerminalEntry: React.FC<TerminalEntryProps> = ({ onComplete }) => {
         {showPrompt && (
           <div className="mt-12 flex flex-col items-center animate-in fade-in duration-1000">
             <p className="text-zinc-300 mb-8 tracking-[0.2em] text-center uppercase">
-              Do you accept the evaluation?
+              Você aceita a avaliação?
             </p>
             
             <button
@@ -45,7 +45,7 @@ export const TerminalEntry: React.FC<TerminalEntryProps> = ({ onComplete }) => {
             >
               <div className="absolute inset-0 bg-red-900/10 scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-300" />
               <span className="relative z-10 text-red-600 font-bold tracking-widest text-lg group-hover:text-red-500">
-                ACCEPT
+                ACEITAR
               </span>
               
               {/* Corner decors */}
