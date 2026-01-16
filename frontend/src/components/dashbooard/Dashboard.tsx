@@ -361,7 +361,7 @@ export const Dashboard: React.FC = () => {
         <span className="text-[10px] font-mono text-green-700 animate-pulse">● ONLINE</span>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+      <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
         {messages.map((msg) => (
           <div key={msg.id} className={`flex ${msg.sender === 'USER' ? 'justify-end' : 'justify-start'}`}>
             <div className={`max-w-[80%] p-4 border ${
