@@ -5,6 +5,7 @@ import { TerminalEntry } from '@/components/TerminalEntry';
 import { SystemInterface } from '@/components/SystemInterface';
 import { Dashboard } from '@/components/dashbooard/Dashboard';
 import { ScanlineOverlay } from '@/components/UI/ScanlineOverlay';
+import { CustomCursor } from '@/components/UI/CustomCursor';
 
 const App: React.FC = () => {
   const [systemState, setSystemState] = useState<'BOOT' | 'LANDING' | 'DASHBOARD'>('BOOT');
@@ -20,6 +21,7 @@ const App: React.FC = () => {
 
   return (
     <div className="relative min-h-screen bg-black text-zinc-400 font-mono selection:bg-red-900 selection:text-white overflow-hidden">
+      <CustomCursor />
       <ScanlineOverlay />
       
       <main className="relative z-10 w-full min-h-screen flex flex-col">
