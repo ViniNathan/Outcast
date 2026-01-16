@@ -1,7 +1,11 @@
-import React, { useState } from 'react';
-import { PlayerStat, Quest } from '@/types/dashboard';
-import { User, AlertTriangle, Check } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { PlayerStat, Quest, ChatMessage, RankEntry } from '../types';
+import { 
+  User, AlertTriangle, Check, Trophy, MessageSquare, 
+  Activity, Settings, Send, Lock, Cpu, ChevronRight 
+} from 'lucide-react';
 
+// --- DATA CONSTANTS ---
 const INITIAL_STATS: PlayerStat[] = [
   { label: 'FORÇA', value: 12, code: 'FOR' },
   { label: 'AGILIDADE', value: 14, code: 'AGI' },
@@ -17,9 +21,36 @@ const INITIAL_QUESTS: Quest[] = [
   { id: 4, title: 'CORRIDA', current: 5, total: 10, unit: 'km', completed: false },
 ];
 
-export const Dashboard: React.FC = () => {
-  const [quests, setQuests] = useState<Quest[]>(INITIAL_QUESTS);
+const MOCK_RANKING: RankEntry[] = [
+  { rank: 1, name: 'SUNG JIN-WOO', level: 146, job: 'MONARCA DAS SOMBRAS' },
+  { rank: 2, name: 'THOMAS ANDRE', level: 130, job: 'GOLIATH' },
+  { rank: 3, name: 'LIU ZHIGANG', level: 128, job: 'HERÓI DA CHINA' },
+  { rank: 4, name: 'GOTO RYUJI', level: 115, job: 'ESPADACHIM' },
+  { rank: 5, name: 'CHA HAE-IN', level: 112, job: 'MESTRE DA ESPADA' },
+  { rank: 9999, name: 'OUTCAST', level: 1, job: 'NENHUMA', isUser: true },
+];
 
+// --- MAIN COMPONENT ---
+export const Dashboard: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<'STATUS' | 'RANKING' | 'ORACLE' | 'PROFILE'>('STATUS');
+  const [quests, setQuests] = useState<Quest[]>(INITIAL_QUESTS);
+  
+  // Profile State
+  const [playerName, setPlayerName] = useState('OUTCAST');
+  const [playerTitle, setPlayerTitle] = useState('Matador de Lobos');
+
+  // Chat State
+  const [chatInput, setChatInput] = useState('');
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    { id: '1', sender: 'SYSTEM', text: 'O Oráculo está online. Solicite uma diretriz de missão ou análise de combate.', timestamp: new Date() }
+  ]);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, activeTab]);
+
+  // Handlers
   const toggleQuest = (id: number) => {
     setQuests(prev => prev.map(q => {
       if (q.id === id) {
@@ -27,197 +58,410 @@ export const Dashboard: React.FC = () => {
         return {
           ...q,
           completed: isNowComplete,
-          current: isNowComplete ? q.total : Math.floor(q.total / 2) // Demo logic: reset to 50% or full
+          current: isNowComplete ? q.total : Math.floor(q.total / 2)
         };
       }
       return q;
     }));
   };
 
-  return (
-    <div className="w-full max-w-6xl mx-auto px-4 md:px-6 py-20 md:py-24 animate-in fade-in slide-in-from-bottom-4 duration-700">
+  const handleSendMessage = async () => {
+    if (!chatInput.trim()) return;
+
+    const userMsg: ChatMessage = { id: Date.now().toString(), sender: 'USER', text: chatInput, timestamp: new Date() };
+    setMessages(prev => [...prev, userMsg]);
+    setChatInput('');
+
+    // Simulate AI Latency
+    setTimeout(() => {
+      const responses = [
+        "CALCULANDO VIABILIDADE...",
+        "SEU NÍVEL ATUAL É INSUFICIENTE PARA ESSA QUESTÃO.",
+        "NOVA MISSÃO GERADA: SOBREVIVA.",
+        "ANÁLISE CONCLUÍDA: VOCÊ PRECISA DE MAIS FORÇA.",
+        "O SISTEMA RECONHECE SUA AMBIÇÃO. MAS NÃO SUA CAPACIDADE."
+      ];
+      const randomResponse = responses[Math.floor(Math.random() * responses.length)];
       
-      {/* HEADER */}
-      <header className="flex flex-col md:flex-row md:items-end justify-between border-b border-zinc-800 pb-4 mb-8 gap-4">
-        <div>
-          <h2 className="text-zinc-500 text-xs font-mono mb-1 tracking-widest">STATUS DO JOGADOR</h2>
-          <h1 className="text-3xl font-bold text-zinc-100 tracking-tighter">JANELA_01</h1>
+      const sysMsg: ChatMessage = { 
+        id: (Date.now() + 1).toString(), 
+        sender: 'SYSTEM', 
+        text: randomResponse, 
+        timestamp: new Date() 
+      };
+      setMessages(prev => [...prev, sysMsg]);
+    }, 1500);
+  };
+
+  // --- SUB-VIEWS ---
+
+  const renderStatus = () => (
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
+      {/* LEFT COL: IDENTITY */}
+      <div className="lg:col-span-4 space-y-6">
+        <div className="border border-zinc-800 bg-zinc-900/10 p-1 relative aspect-square flex items-center justify-center overflow-hidden group">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-zinc-800/20 to-transparent opacity-50" />
+          <User size={64} className="text-zinc-800 group-hover:text-red-900/50 transition-colors duration-500" strokeWidth={1} />
+          {/* Markers */}
+          <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-zinc-600" />
+          <div className="absolute top-0 right-0 w-2 h-2 border-t border-r border-zinc-600" />
+          <div className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-zinc-600" />
+          <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-zinc-600" />
         </div>
-        <div className="flex gap-4 font-mono text-xs text-zinc-600">
-           {/* Rank removed from here to be placed prominently below */}
-          <span>FADIGA: <span className="text-zinc-400">0%</span></span>
-        </div>
-      </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
-        
-        {/* LEFT COL: IDENTITY */}
-        <div className="lg:col-span-4 space-y-6">
-          
-          {/* AVATAR BOX */}
-          <div className="border border-zinc-800 bg-zinc-900/10 p-1 relative aspect-square flex items-center justify-center overflow-hidden group">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-zinc-800/20 to-transparent opacity-50" />
-            <User size={64} className="text-zinc-800 group-hover:text-red-900/50 transition-colors duration-500" strokeWidth={1} />
-            
-            {/* Corner Markers */}
-            <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-zinc-600" />
-            <div className="absolute top-0 right-0 w-2 h-2 border-t border-r border-zinc-600" />
-            <div className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-zinc-600" />
-            <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-zinc-600" />
-          </div>
-
-          {/* IDENTITY CARD */}
-          <div className="border border-zinc-800 p-6 space-y-6 bg-black relative overflow-hidden">
-             {/* RANK WATERMARK */}
-             <div className="absolute top-4 right-6 flex flex-col items-center pointer-events-none opacity-90">
-                <span className="text-[10px] text-zinc-600 font-mono mb-[-5px]">RANK</span>
-                <span className="text-6xl font-black text-red-900 drop-shadow-[0_0_10px_rgba(127,29,29,0.5)]">E</span>
-             </div>
-
-             <div className="space-y-1 relative z-10">
-               <span className="text-[10px] text-zinc-600 font-mono block">NOME</span>
-               <span className="text-2xl text-zinc-200 font-bold tracking-wide">OUTCAST</span>
-             </div>
-             
-             <div className="grid grid-cols-2 gap-4 relative z-10">
-               <div className="space-y-1">
-                 <span className="text-[10px] text-zinc-600 font-mono block">NÍVEL</span>
-                 <span className="text-xl text-zinc-300 font-mono">1</span>
-               </div>
-               <div className="space-y-1">
-                 <span className="text-[10px] text-zinc-600 font-mono block">CLASSE</span>
-                 <span className="text-xl text-zinc-500 font-mono">NENHUMA</span>
-               </div>
-             </div>
-
-             <div className="space-y-1 relative z-10">
-               <span className="text-[10px] text-zinc-600 font-mono block">TÍTULO</span>
-               <span className="text-sm text-zinc-500 uppercase">Matador de Lobos</span>
-             </div>
-          </div>
-
-          {/* VITALS */}
-          <div className="space-y-3">
-            <div className="space-y-1">
-              <div className="flex justify-between text-[10px] font-mono text-zinc-500">
-                <span>HP</span>
-                <span>100/100</span>
-              </div>
-              <div className="h-3 w-full bg-zinc-950 border border-zinc-800">
-                <div className="h-full bg-red-900 w-full shadow-[0_0_10px_rgba(127,29,29,0.3)]" />
-              </div>
+        <div className="border border-zinc-800 p-6 space-y-6 bg-black relative overflow-hidden">
+            <div className="absolute top-4 right-6 flex flex-col items-center pointer-events-none opacity-90">
+              <span className="text-[10px] text-zinc-600 font-mono mb-[-5px]">RANK</span>
+              <span className="text-6xl font-black text-red-900 drop-shadow-[0_0_10px_rgba(127,29,29,0.5)]">E</span>
             </div>
-            <div className="space-y-1">
-              <div className="flex justify-between text-[10px] font-mono text-zinc-500">
-                <span>MP</span>
-                <span>35/35</span>
-              </div>
-              <div className="h-3 w-full bg-zinc-950 border border-zinc-800">
-                <div className="h-full bg-blue-900/60 w-full shadow-[0_0_10px_rgba(30,58,138,0.3)]" />
-              </div>
-            </div>
-          </div>
-        </div>
 
-        {/* RIGHT COL: CONTENT */}
-        <div className="lg:col-span-8 space-y-8">
-          
-          {/* STATS GRID */}
-          <div className="space-y-2">
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
-              {INITIAL_STATS.map((stat) => (
-                <div key={stat.code} className="border border-zinc-900 p-4 hover:border-red-900/30 transition-colors group bg-zinc-950/30 flex flex-col items-center justify-center text-center">
-                  <div className="text-[10px] text-zinc-600 font-mono mb-2 group-hover:text-red-800 transition-colors">
-                    {stat.code}
-                  </div>
-                  <div className="text-3xl font-bold text-zinc-300 font-mono">
-                    {String(stat.value).padStart(2, '0')}
-                  </div>
-                </div>
-              ))}
+            <div className="space-y-1 relative z-10">
+              <span className="text-[10px] text-zinc-600 font-mono block">NOME</span>
+              <span className="text-2xl text-zinc-200 font-bold tracking-wide">{playerName}</span>
             </div>
             
-            {/* Available Points - MORE VISIBLE */}
-            <div className="w-full bg-zinc-900/30 border border-dashed border-zinc-800 p-4 flex justify-between items-center group hover:border-red-900/30 transition-colors">
-               <span className="text-xs text-zinc-500 font-mono uppercase tracking-widest">PONTOS DISPONÍVEIS</span>
-               <span className="text-xl font-bold font-mono text-red-600 animate-pulse">
-                  0 <span className="inline-block w-2 h-4 bg-red-600 ml-1 animate-blink"></span>
-               </span>
-            </div>
-          </div>
-
-          {/* ACTIVE QUEST PANEL */}
-          <div className="border border-zinc-800 relative overflow-hidden bg-black">
-            {/* Header */}
-            <div className="bg-zinc-900/50 p-4 border-b border-zinc-800 flex justify-between items-center">
-               <span className="text-red-600 font-bold text-sm tracking-widest flex items-center gap-2">
-                 <AlertTriangle size={16} /> LOG DE MISSÕES
-               </span>
-               <span className="text-[10px] text-zinc-500 font-mono bg-zinc-900 px-2 py-1 border border-zinc-800">
-                 DIFICULDADE: E
-               </span>
-            </div>
-
-            <div className="p-6">
-              <h3 className="text-2xl text-zinc-100 mb-2 uppercase tracking-tight font-bold">Missão Diária: Preparação</h3>
-              <p className="text-zinc-500 text-xs font-mono mb-8 border-b border-zinc-900 pb-4 leading-relaxed">
-                Complete o treinamento físico para fortalecer seu receptáculo. <br/>
-                <span className="text-red-900/80">O fracasso resultará em punição severa na Zona de Penalidade.</span>
-              </p>
-
-              <div className="space-y-6">
-                {quests.map((quest) => {
-                  const percent = (quest.current / quest.total) * 100;
-                  return (
-                    <div 
-                      key={quest.id} 
-                      onClick={() => toggleQuest(quest.id)}
-                      className={`group cursor-pointer select-none transition-all duration-300 ${quest.completed ? 'opacity-50 grayscale' : 'opacity-100'}`}
-                    >
-                      <div className="flex justify-between items-end mb-2">
-                        <span className="text-sm text-zinc-300 font-bold tracking-wider flex items-center gap-3 group-hover:text-red-500 transition-colors">
-                          {/* Custom Checkbox */}
-                          <div className={`w-5 h-5 border flex items-center justify-center transition-colors ${
-                            quest.completed ? 'bg-zinc-800 border-zinc-600' : 'border-zinc-700 bg-black group-hover:border-red-600'
-                          }`}>
-                            {quest.completed && <Check size={12} className="text-zinc-400" />}
-                          </div>
-                          {quest.title}
-                        </span>
-                        <span className="text-xs font-mono text-zinc-500">
-                          {quest.current}/{quest.total} {quest.unit}
-                        </span>
-                      </div>
-                      
-                      {/* Progress Bar */}
-                      <div className="h-4 w-full bg-zinc-950 border border-zinc-900 relative overflow-hidden">
-                        <div 
-                          className={`h-full transition-all duration-500 ease-out ${quest.completed ? 'bg-zinc-600' : 'bg-red-900'}`}
-                          style={{ width: `${percent}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
+            <div className="grid grid-cols-2 gap-4 relative z-10">
+              <div className="space-y-1">
+                <span className="text-[10px] text-zinc-600 font-mono block">NÍVEL</span>
+                <span className="text-xl text-zinc-300 font-mono">1</span>
+              </div>
+              <div className="space-y-1">
+                <span className="text-[10px] text-zinc-600 font-mono block">CLASSE</span>
+                <span className="text-xl text-zinc-500 font-mono">NENHUMA</span>
               </div>
             </div>
 
-            {/* Warning Footer */}
-            <div className="bg-red-950/5 border-t border-red-900/20 p-4 text-center">
-              <span className="text-xs text-red-800 font-mono uppercase animate-pulse font-bold tracking-widest">
-                Tempo Restante: 14:02:59
-              </span>
+            <div className="space-y-1 relative z-10">
+              <span className="text-[10px] text-zinc-600 font-mono block">TÍTULO</span>
+              <span className="text-sm text-zinc-500 uppercase">{playerTitle}</span>
+            </div>
+        </div>
+
+        {/* VITALS */}
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <div className="flex justify-between text-[10px] font-mono text-zinc-500">
+              <span>HP</span>
+              <span>100/100</span>
+            </div>
+            <div className="h-3 w-full bg-zinc-950 border border-zinc-800">
+              <div className="h-full bg-red-900 w-full shadow-[0_0_10px_rgba(127,29,29,0.3)]" />
             </div>
           </div>
-
+          <div className="space-y-1">
+            <div className="flex justify-between text-[10px] font-mono text-zinc-500">
+              <span>MP</span>
+              <span>35/35</span>
+            </div>
+            <div className="h-3 w-full bg-zinc-950 border border-zinc-800">
+              <div className="h-full bg-blue-900/60 w-full shadow-[0_0_10px_rgba(30,58,138,0.3)]" />
+            </div>
+          </div>
         </div>
       </div>
+
+      {/* RIGHT COL: CONTENT */}
+      <div className="lg:col-span-8 space-y-8">
+        <div className="space-y-2">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+            {INITIAL_STATS.map((stat) => (
+              <div key={stat.code} className="border border-zinc-900 p-4 hover:border-red-900/30 transition-colors group bg-zinc-950/30 flex flex-col items-center justify-center text-center">
+                <div className="text-[10px] text-zinc-600 font-mono mb-2 group-hover:text-red-800 transition-colors">
+                  {stat.code}
+                </div>
+                <div className="text-3xl font-bold text-zinc-300 font-mono">
+                  {String(stat.value).padStart(2, '0')}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="w-full bg-zinc-900/30 border border-dashed border-zinc-800 p-4 flex justify-between items-center group hover:border-red-900/30 transition-colors">
+              <span className="text-xs text-zinc-500 font-mono uppercase tracking-widest">PONTOS DISPONÍVEIS</span>
+              <span className="text-xl font-bold font-mono text-red-600 animate-pulse">
+                0 <span className="inline-block w-2 h-4 bg-red-600 ml-1 animate-blink"></span>
+              </span>
+          </div>
+        </div>
+
+        <div className="border border-zinc-800 relative overflow-hidden bg-black">
+          <div className="bg-zinc-900/50 p-4 border-b border-zinc-800 flex justify-between items-center">
+              <span className="text-red-600 font-bold text-sm tracking-widest flex items-center gap-2">
+                <AlertTriangle size={16} /> LOG DE MISSÕES
+              </span>
+              <span className="text-[10px] text-zinc-500 font-mono bg-zinc-900 px-2 py-1 border border-zinc-800">
+                DIFICULDADE: E
+              </span>
+          </div>
+
+          <div className="p-6">
+            <h3 className="text-2xl text-zinc-100 mb-2 uppercase tracking-tight font-bold">Missão Diária: Preparação</h3>
+            <p className="text-zinc-500 text-xs font-mono mb-8 border-b border-zinc-900 pb-4 leading-relaxed">
+              Complete o treinamento físico para fortalecer seu receptáculo. <br/>
+              <span className="text-red-900/80">O fracasso resultará em punição severa na Zona de Penalidade.</span>
+            </p>
+
+            <div className="space-y-6">
+              {quests.map((quest) => {
+                const percent = (quest.current / quest.total) * 100;
+                return (
+                  <div 
+                    key={quest.id} 
+                    onClick={() => toggleQuest(quest.id)}
+                    className={`group cursor-pointer select-none transition-all duration-300 ${quest.completed ? 'opacity-50 grayscale' : 'opacity-100'}`}
+                  >
+                    <div className="flex justify-between items-end mb-2">
+                      <span className="text-sm text-zinc-300 font-bold tracking-wider flex items-center gap-3 group-hover:text-red-500 transition-colors">
+                        <div className={`w-5 h-5 border flex items-center justify-center transition-colors ${
+                          quest.completed ? 'bg-zinc-800 border-zinc-600' : 'border-zinc-700 bg-black group-hover:border-red-600'
+                        }`}>
+                          {quest.completed && <Check size={12} className="text-zinc-400" />}
+                        </div>
+                        {quest.title}
+                      </span>
+                      <span className="text-xs font-mono text-zinc-500">
+                        {quest.current}/{quest.total} {quest.unit}
+                      </span>
+                    </div>
+                    <div className="h-4 w-full bg-zinc-950 border border-zinc-900 relative overflow-hidden">
+                      <div 
+                        className={`h-full transition-all duration-500 ease-out ${quest.completed ? 'bg-zinc-600' : 'bg-red-900'}`}
+                        style={{ width: `${percent}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <div className="bg-red-950/5 border-t border-red-900/20 p-4 text-center">
+            <span className="text-xs text-red-800 font-mono uppercase animate-pulse font-bold tracking-widest">
+              Tempo Restante: 14:02:59
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderRanking = () => (
+    <div className="w-full max-w-4xl mx-auto animate-in fade-in zoom-in-95 duration-500">
+      <div className="mb-8 border-l-4 border-red-800 pl-4">
+        <h2 className="text-3xl font-bold text-zinc-100 uppercase tracking-tighter">Classificação Global</h2>
+        <p className="text-zinc-500 font-mono text-sm mt-1">Comparando seu poder insignificante com a elite.</p>
+      </div>
+
+      <div className="border border-zinc-800 bg-black">
+        <div className="grid grid-cols-12 gap-4 p-4 border-b border-zinc-800 bg-zinc-900/50 text-[10px] font-mono text-zinc-500 uppercase tracking-widest">
+          <div className="col-span-2">Rank</div>
+          <div className="col-span-6">Hunter</div>
+          <div className="col-span-2">Level</div>
+          <div className="col-span-2">Class</div>
+        </div>
+        
+        {MOCK_RANKING.map((entry) => (
+          <div 
+            key={entry.rank} 
+            className={`grid grid-cols-12 gap-4 p-4 border-b border-zinc-900 items-center ${
+              entry.isUser ? 'bg-red-950/10 border-red-900/30' : 'hover:bg-zinc-900/20'
+            }`}
+          >
+            <div className="col-span-2 font-bold font-mono text-lg">
+              {entry.rank === 1 ? <span className="text-yellow-500">#1</span> : 
+               entry.isUser ? <span className="text-red-600">ERROR</span> : 
+               <span className="text-zinc-600">#{entry.rank}</span>}
+            </div>
+            <div className="col-span-6">
+              <span className={`block font-bold tracking-wide ${entry.isUser ? 'text-red-500' : 'text-zinc-300'}`}>
+                {entry.name}
+              </span>
+            </div>
+            <div className="col-span-2 font-mono text-zinc-400">{entry.level}</div>
+            <div className="col-span-2 text-xs font-mono text-zinc-500">{entry.job}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
+  const renderOracle = () => (
+    <div className="w-full h-[600px] border border-zinc-800 bg-black flex flex-col animate-in fade-in slide-in-from-right-4 duration-500">
+      <div className="bg-zinc-900/50 p-4 border-b border-zinc-800 flex justify-between items-center">
+        <div className="flex items-center gap-3">
+          <Cpu className="text-red-600" size={20} />
+          <h2 className="font-bold text-zinc-200 tracking-wider">ORÁCULO DO SISTEMA</h2>
+        </div>
+        <span className="text-[10px] font-mono text-green-700 animate-pulse">● ONLINE</span>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        {messages.map((msg) => (
+          <div key={msg.id} className={`flex ${msg.sender === 'USER' ? 'justify-end' : 'justify-start'}`}>
+            <div className={`max-w-[80%] p-4 border ${
+              msg.sender === 'USER' 
+                ? 'bg-zinc-900 border-zinc-700 text-zinc-200' 
+                : 'bg-black border-red-900/30 text-red-500'
+            }`}>
+               <div className="flex items-center gap-2 mb-2 border-b border-dashed border-zinc-700/50 pb-1">
+                 <span className="text-[10px] font-mono uppercase opacity-70">
+                   {msg.sender === 'USER' ? 'VOCÊ' : 'SISTEMA'}
+                 </span>
+                 <span className="text-[10px] font-mono opacity-50">
+                   {msg.timestamp.toLocaleTimeString()}
+                 </span>
+               </div>
+               <p className="font-mono text-sm whitespace-pre-wrap leading-relaxed">{msg.text}</p>
+            </div>
+          </div>
+        ))}
+        <div ref={chatEndRef} />
+      </div>
+
+      <div className="p-4 border-t border-zinc-800 bg-zinc-950">
+        <div className="flex gap-4">
+          <input 
+            type="text" 
+            value={chatInput}
+            onChange={(e) => setChatInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+            placeholder="Solicite uma análise ou diretriz..."
+            className="flex-1 bg-black border border-zinc-800 p-3 text-zinc-300 font-mono text-sm focus:border-red-900 focus:outline-none transition-colors"
+          />
+          <button 
+            onClick={handleSendMessage}
+            className="bg-zinc-900 border border-zinc-800 p-3 text-zinc-400 hover:text-red-500 hover:border-red-900 transition-all"
+          >
+            <Send size={20} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderProfile = () => (
+    <div className="max-w-3xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
+       <div className="mb-8 text-center">
+          <User size={64} className="mx-auto text-zinc-700 mb-4" />
+          <h2 className="text-2xl font-bold text-zinc-100">DADOS DO RECEPTÁCULO</h2>
+          <p className="text-zinc-600 font-mono text-sm mt-2">Permissão limitada de edição concedida.</p>
+       </div>
+
+       <div className="space-y-6 border border-zinc-800 p-8 bg-black">
+          <div className="space-y-2">
+            <label className="text-xs font-mono text-zinc-500 uppercase">Designação (Nome)</label>
+            <input 
+              type="text" 
+              value={playerName}
+              onChange={(e) => setPlayerName(e.target.value)}
+              className="w-full bg-zinc-900/30 border-b border-zinc-700 p-3 text-xl text-zinc-200 focus:border-red-600 focus:bg-zinc-900/50 outline-none transition-all font-bold tracking-wide"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-mono text-zinc-500 uppercase">Título Atual</label>
+            <input 
+              type="text" 
+              value={playerTitle}
+              onChange={(e) => setPlayerTitle(e.target.value)}
+              className="w-full bg-zinc-900/30 border-b border-zinc-700 p-3 text-zinc-400 focus:border-red-600 focus:bg-zinc-900/50 outline-none transition-all font-mono"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-6 pt-4">
+             <div className="space-y-2 opacity-50 cursor-not-allowed">
+                <label className="text-xs font-mono text-zinc-600 uppercase flex items-center gap-2">
+                  <Lock size={10} /> Classe
+                </label>
+                <div className="w-full border-b border-zinc-800 p-3 text-zinc-700 font-mono uppercase">
+                  Nenhuma
+                </div>
+             </div>
+             <div className="space-y-2 opacity-50 cursor-not-allowed">
+                <label className="text-xs font-mono text-zinc-600 uppercase flex items-center gap-2">
+                  <Lock size={10} /> Rank
+                </label>
+                <div className="w-full border-b border-zinc-800 p-3 text-red-900/50 font-bold font-mono uppercase">
+                  E-Rank
+                </div>
+             </div>
+          </div>
+          
+          <div className="pt-8">
+            <button className="w-full py-4 bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:border-red-600 hover:bg-red-950/20 transition-all font-bold tracking-widest uppercase text-sm">
+              Salvar Alterações
+            </button>
+          </div>
+       </div>
+    </div>
+  );
+
+  return (
+    <div className="w-full max-w-7xl mx-auto px-4 md:px-6 py-12 md:py-16">
       
+      {/* TOP NAVIGATION */}
+      <nav className="flex justify-center mb-12 border-b border-zinc-900">
+         <div className="flex gap-1 md:gap-8">
+            <button 
+              onClick={() => setActiveTab('STATUS')}
+              className={`flex items-center gap-2 px-4 md:px-6 py-4 border-b-2 transition-all duration-300 ${
+                activeTab === 'STATUS' 
+                ? 'border-red-600 text-red-500' 
+                : 'border-transparent text-zinc-600 hover:text-zinc-400'
+              }`}
+            >
+              <Activity size={16} />
+              <span className="font-mono text-xs md:text-sm tracking-widest uppercase">Status</span>
+            </button>
+            <button 
+              onClick={() => setActiveTab('RANKING')}
+              className={`flex items-center gap-2 px-4 md:px-6 py-4 border-b-2 transition-all duration-300 ${
+                activeTab === 'RANKING' 
+                ? 'border-red-600 text-red-500' 
+                : 'border-transparent text-zinc-600 hover:text-zinc-400'
+              }`}
+            >
+              <Trophy size={16} />
+              <span className="font-mono text-xs md:text-sm tracking-widest uppercase">Ranking</span>
+            </button>
+            <button 
+              onClick={() => setActiveTab('ORACLE')}
+              className={`flex items-center gap-2 px-4 md:px-6 py-4 border-b-2 transition-all duration-300 ${
+                activeTab === 'ORACLE' 
+                ? 'border-red-600 text-red-500' 
+                : 'border-transparent text-zinc-600 hover:text-zinc-400'
+              }`}
+            >
+              <MessageSquare size={16} />
+              <span className="font-mono text-xs md:text-sm tracking-widest uppercase">Oráculo</span>
+            </button>
+            <button 
+              onClick={() => setActiveTab('PROFILE')}
+              className={`flex items-center gap-2 px-4 md:px-6 py-4 border-b-2 transition-all duration-300 ${
+                activeTab === 'PROFILE' 
+                ? 'border-red-600 text-red-500' 
+                : 'border-transparent text-zinc-600 hover:text-zinc-400'
+              }`}
+            >
+              <Settings size={16} />
+              <span className="font-mono text-xs md:text-sm tracking-widest uppercase">Perfil</span>
+            </button>
+         </div>
+      </nav>
+
+      {/* CONTENT AREA */}
+      <main className="min-h-[600px]">
+        {activeTab === 'STATUS' && renderStatus()}
+        {activeTab === 'RANKING' && renderRanking()}
+        {activeTab === 'ORACLE' && renderOracle()}
+        {activeTab === 'PROFILE' && renderProfile()}
+      </main>
+
       {/* SYSTEM TICKER */}
       <div className="fixed bottom-0 right-0 w-full md:w-auto md:max-w-sm bg-black border-t md:border-l md:border-t border-zinc-900 p-2 z-50">
          <div className="font-mono text-[10px] text-zinc-600 h-6 overflow-hidden flex items-center">
             <span className="mr-2 text-green-900">{`>`}</span>
-            <span className="animate-pulse">Monitoramento do sistema ativo...</span>
+            <span className="animate-pulse">
+              {activeTab === 'ORACLE' ? 'CONEXÃO NEURAL ESTABELECIDA...' : 'Monitoramento do sistema ativo...'}
+            </span>
          </div>
       </div>
 
