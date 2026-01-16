@@ -1,21 +1,47 @@
+'use client';
+
 import React, { useEffect, useState } from 'react';
 import { MISSION_LOGS, SYSTEM_MESSAGES } from '@/utils/constants';
 import { Radio, Activity, AlertTriangle, Zap, Brain, Target, Shield, Check, X } from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 
 interface SystemInterfaceProps {
   onAwaken: () => void;
+  isFirstAccess: boolean;
 }
 
-export const SystemInterface: React.FC<SystemInterfaceProps> = ({ onAwaken }) => {
+export const SystemInterface: React.FC<SystemInterfaceProps> = ({ onAwaken, isFirstAccess }) => {
   const [isVisible, setIsVisible] = useState(false);
+  const { status } = useSession();
+  const router = useRouter();
 
   useEffect(() => {
     // Delay slightly to handle transition from boot
     setTimeout(() => setIsVisible(true), 100);
   }, []);
 
+  const handleAccess = () => {
+    if (status === 'authenticated') {
+      onAwaken();
+      return;
+    }
+    router.push(isFirstAccess ? '/register' : '/login');
+  };
+
   return (
     <div className={`w-full max-w-5xl mx-auto px-6 py-24 transition-opacity duration-1000 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
+
+      {/* Top-right access shortcut */}
+      <div className="fixed top-0 right-0 p-4 z-50">
+        <button
+          type="button"
+          onClick={handleAccess}
+          className="border-2 border-red-600 bg-black/60 backdrop-blur px-4 py-2 text-[15px] font-mono tracking-[0.25em] text-white hover:text-red-500 hover:border-red-600 transition-colors uppercase"
+        >
+          ACESSAR
+        </button>
+      </div>
       
       {/* 1. HERO SECTION */}
       <section className="mb-32 relative border-l border-zinc-900 pl-8 md:pl-16 py-8">
@@ -150,7 +176,7 @@ export const SystemInterface: React.FC<SystemInterfaceProps> = ({ onAwaken }) =>
                </ul>
 
                <button 
-                 onClick={onAwaken}
+            onClick={handleAccess}
                  className="w-full py-4 border border-zinc-800 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-900 transition-colors uppercase font-mono text-xs tracking-widest"
                >
                  Iniciar Sobrevivência
@@ -191,7 +217,7 @@ export const SystemInterface: React.FC<SystemInterfaceProps> = ({ onAwaken }) =>
                </ul>
 
                <button 
-                onClick={onAwaken}
+                onClick={handleAccess}
                 className="w-full py-4 bg-red-900 hover:bg-red-700 text-white transition-all uppercase font-mono text-xs tracking-widest font-bold relative overflow-hidden group"
                >
                  <span className="relative z-10">Dominar o Sistema</span>
@@ -227,7 +253,7 @@ export const SystemInterface: React.FC<SystemInterfaceProps> = ({ onAwaken }) =>
           </div>
 
           <button 
-            onClick={onAwaken}
+            onClick={handleAccess}
             className="group relative bg-zinc-950 hover:bg-black border border-zinc-800 hover:border-red-600 text-zinc-300 hover:text-red-500 transition-all duration-500 w-full md:w-auto min-w-[300px] px-8 py-6 uppercase font-bold tracking-[0.15em] overflow-hidden"
           >
             <span className="relative z-10 flex items-center justify-center gap-3">
