@@ -127,7 +127,7 @@ export const SystemInterface: React.FC<SystemInterfaceProps> = ({ onAwaken }) =>
             {/* FREE TIER */}
             <div className="border border-zinc-800 bg-zinc-900/10 p-8 flex flex-col relative group">
                <div className="absolute top-0 left-0 bg-zinc-800 text-black text-[10px] font-bold px-2 py-1 font-mono uppercase">
-                 Recruta
+                 Fracassado
                </div>
                <h3 className="text-2xl font-bold text-zinc-400 mb-2">RANK E</h3>
                <div className="text-4xl font-bold text-zinc-200 mb-6 font-mono">
