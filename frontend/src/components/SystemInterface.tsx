@@ -18,7 +18,7 @@ export const SystemInterface: React.FC<SystemInterfaceProps> = ({ onAwaken }) =>
     <div className={`w-full max-w-5xl mx-auto px-6 py-24 transition-opacity duration-1000 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
       
       {/* 1. HERO SECTION */}
-      <section className="mb-32 relative border-l border-zinc-900 pl-8 md:pl-16 py-8 animate-in fade-in slide-in-from-left-8 duration-1000">
+      <section className="mb-32 relative border-l border-zinc-900 pl-8 md:pl-16 py-8">
         <div className="absolute -left-[1px] top-0 h-16 w-[2px] bg-red-900" />
         
         <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-zinc-200 uppercase tracking-tighter mb-6 leading-[0.9]">
@@ -28,8 +28,8 @@ export const SystemInterface: React.FC<SystemInterfaceProps> = ({ onAwaken }) =>
         
         <div className="max-w-xl">
           <p className="text-zinc-500 text-lg md:text-xl font-mono border-l-2 border-zinc-800 pl-4 py-1 mt-8">
-            OUTCAST transforma sua rotina em um sistema de evolução de RPG. <br />
-            <span className="text-zinc-400">O mundo real é apenas o lobby.</span>
+            <span className="text-red-700">OUTCAST</span> transforma sua vida em um sistema de progressão real. <br />
+            <span className="text-zinc-400">Missões. Ranking. Consequências.</span>
           </p>
         </div>
       </section>
