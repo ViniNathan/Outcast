@@ -3,11 +3,18 @@
 import React, { useEffect, useState } from 'react';
 
 export const CustomCursor: React.FC = () => {
+  const [enabled, setEnabled] = useState(false);
   const [position, setPosition] = useState({ x: -100, y: -100 }); // Start off-screen
   const [isPointer, setIsPointer] = useState(false);
   const [isClicking, setIsClicking] = useState(false);
 
   useEffect(() => {
+    // Enable only on devices with a "fine" pointer and hover support (mouse/trackpad).
+    const mq = window.matchMedia('(hover: hover) and (pointer: fine)');
+    const update = () => setEnabled(mq.matches);
+    update();
+    mq.addEventListener?.('change', update);
+
     const onMouseMove = (e: MouseEvent) => {
       setPosition({ x: e.clientX, y: e.clientY });
       
@@ -41,11 +48,14 @@ export const CustomCursor: React.FC = () => {
     window.addEventListener('mouseup', onMouseUp);
 
     return () => {
+      mq.removeEventListener?.('change', update);
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mousedown', onMouseDown);
       window.removeEventListener('mouseup', onMouseUp);
     };
   }, []);
+
+  if (!enabled) return null;
 
   return (
     <div

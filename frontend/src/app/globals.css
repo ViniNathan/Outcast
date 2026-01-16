@@ -25,9 +25,11 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* Hide the native cursor (we render our own in `CustomCursor`) */
-html,
-body,
-* {
-  cursor: none !important;
+/* Hide the native cursor only on devices that actually have a mouse/trackpad */
+@media (hover: hover) and (pointer: fine) {
+  html,
+  body,
+  * {
+    cursor: none !important;
+  }
 }
