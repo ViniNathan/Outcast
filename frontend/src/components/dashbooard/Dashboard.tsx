@@ -302,7 +302,7 @@ export const Dashboard: React.FC = () => {
             <div>
                <h3 className="text-lg font-bold text-zinc-200 uppercase flex items-center gap-2">
                  <Share2 size={18} className="text-red-600" />
-                 Viralização
+                 Exposição controlada
                </h3>
                <p className="text-sm text-zinc-500 font-mono mt-2 leading-relaxed">
                  Exporte seu card de caçador. Mostre ao mundo seu rank atual. A vergonha pública é um excelente combustível.
