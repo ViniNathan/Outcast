@@ -122,153 +122,175 @@ export const Dashboard: React.FC = () => {
 
   // --- SUB-VIEWS ---
 
-  const renderStatus = () => (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
-      {/* LEFT COL: IDENTITY */}
-      <div className="order-2 lg:order-1 lg:col-span-4 space-y-6">
-        <div className="border border-zinc-800 bg-zinc-900/10 p-1 relative aspect-[16/9] sm:aspect-square flex items-center justify-center overflow-hidden group">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-zinc-800/20 to-transparent opacity-50" />
-          <User size={56} className="text-zinc-800 group-hover:text-red-900/50 transition-colors duration-500" strokeWidth={1} />
-          {/* Markers */}
-          <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-zinc-600" />
-          <div className="absolute top-0 right-0 w-2 h-2 border-t border-r border-zinc-600" />
-          <div className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-zinc-600" />
-          <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-zinc-600" />
-        </div>
-
-        <div className="border border-zinc-800 p-5 sm:p-6 space-y-6 bg-black relative overflow-hidden">
-            <div className="absolute top-4 right-6 flex flex-col items-center pointer-events-none opacity-90">
-              <span className="text-[10px] text-zinc-600 font-mono mb-[-5px]">RANK</span>
-              <span className="text-5xl sm:text-6xl font-black text-red-900 drop-shadow-[0_0_10px_rgba(127,29,29,0.5)]">E</span>
-            </div>
-
-            <div className="space-y-1 relative z-10">
-              <span className="text-[10px] text-zinc-600 font-mono block">NOME</span>
-              <span className="text-xl sm:text-2xl text-zinc-200 font-bold tracking-wide break-words leading-tight">{playerName}</span>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4 relative z-10">
-              <div className="space-y-1">
-                <span className="text-[10px] text-zinc-600 font-mono block">NÍVEL</span>
-                <span className="text-xl text-zinc-300 font-mono">1</span>
-              </div>
-              <div className="space-y-1">
-                <span className="text-[10px] text-zinc-600 font-mono block">CLASSE</span>
-                <span className="text-xl text-zinc-500 font-mono">NENHUMA</span>
-              </div>
-            </div>
-
-            <div className="space-y-1 relative z-10">
-              <span className="text-[10px] text-zinc-600 font-mono block">TÍTULO</span>
-              <span className="text-sm text-zinc-500 uppercase break-words">{playerTitle}</span>
-            </div>
-        </div>
-
-        {/* VITALS */}
-        <div className="space-y-3">
-          <div className="space-y-1">
-            <div className="flex justify-between text-[10px] font-mono text-zinc-500">
-              <span>HP</span>
-              <span>100/100</span>
-            </div>
-            <div className="h-3 w-full bg-zinc-950 border border-zinc-800">
-              <div className="h-full bg-red-900 w-full shadow-[0_0_10px_rgba(127,29,29,0.3)]" />
-            </div>
-          </div>
-          <div className="space-y-1">
-            <div className="flex justify-between text-[10px] font-mono text-zinc-500">
-              <span>MP</span>
-              <span>35/35</span>
-            </div>
-            <div className="h-3 w-full bg-zinc-950 border border-zinc-800">
-              <div className="h-full bg-blue-900/60 w-full shadow-[0_0_10px_rgba(30,58,138,0.3)]" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* RIGHT COL: CONTENT */}
-      <div className="order-1 lg:order-2 lg:col-span-8 space-y-6 sm:space-y-8">
-        <div className="space-y-2">
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-            {INITIAL_STATS.map((stat) => (
-              <div key={stat.code} className="border border-zinc-900 p-3 sm:p-4 hover:border-red-900/30 transition-colors group bg-zinc-950/30 flex flex-col items-center justify-center text-center">
-                <div className="text-[10px] text-zinc-600 font-mono mb-2 group-hover:text-red-800 transition-colors">
-                  {stat.code}
-                </div>
-                <div className="text-2xl sm:text-3xl font-bold text-zinc-300 font-mono">
-                  {String(stat.value).padStart(2, '0')}
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="w-full bg-zinc-900/30 border border-dashed border-zinc-800 p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 group hover:border-red-900/30 transition-colors">
-              <span className="text-xs text-zinc-500 font-mono uppercase tracking-widest">PONTOS DISPONÍVEIS</span>
-              <span className="text-xl font-bold font-mono text-red-600 animate-pulse">
-                0 <span className="inline-block w-2 h-4 bg-red-600 ml-1 animate-blink"></span>
-              </span>
-          </div>
-        </div>
-
-        <div className="border border-zinc-800 relative overflow-hidden bg-black">
-          <div className="bg-zinc-900/50 p-3 sm:p-4 border-b border-zinc-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-              <span className="text-red-600 font-bold text-sm tracking-widest flex items-center gap-2 flex-wrap">
-                <AlertTriangle size={16} /> LOG DE MISSÕES
-              </span>
-              <span className="text-[10px] text-zinc-500 font-mono bg-zinc-900 px-2 py-1 border border-zinc-800">
-                DIFICULDADE: E
-              </span>
-          </div>
-
-          <div className="p-4 sm:p-6">
-            <h3 className="text-xl sm:text-2xl text-zinc-100 mb-2 uppercase tracking-tight font-bold">Missão Diária: Preparação</h3>
-            <p className="text-zinc-500 text-xs font-mono mb-6 sm:mb-8 border-b border-zinc-900 pb-4 leading-relaxed">
-              Complete o treinamento físico para fortalecer seu receptáculo.
-              <span className="text-red-900/80">O fracasso resultará em punição severa na Zona de Penalidade.</span>
-            </p>
-
-            <div className="space-y-6">
-              {quests.map((quest) => {
-                const percent = (quest.current / quest.total) * 100;
-                return (
-                  <div 
-                    key={quest.id} 
-                    onClick={() => toggleQuest(quest.id)}
-                    className={`group cursor-pointer select-none transition-all duration-300 ${quest.completed ? 'opacity-50 grayscale' : 'opacity-100'}`}
-                  >
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-2">
-                      <span className="text-sm text-zinc-300 font-bold tracking-wider flex items-center gap-3 group-hover:text-red-500 transition-colors break-words">
-                        <div className={`w-5 h-5 border flex items-center justify-center transition-colors ${
-                          quest.completed ? 'bg-zinc-800 border-zinc-600' : 'border-zinc-700 bg-black group-hover:border-red-600'
-                        }`}>
-                          {quest.completed && <Check size={12} className="text-zinc-400" />}
-                        </div>
-                        <span className="flex-1 min-w-0 break-words">{quest.title}</span>
-                      </span>
-                      <span className="text-xs font-mono text-zinc-500 shrink-0">
-                        {quest.current}/{quest.total} {quest.unit}
-                      </span>
-                    </div>
-                    <div className="h-4 w-full bg-zinc-950 border border-zinc-900 relative overflow-hidden">
-                      <div 
-                        className={`h-full transition-all duration-500 ease-out ${quest.completed ? 'bg-zinc-600' : 'bg-red-900'}`}
-                        style={{ width: `${percent}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-          <div className="bg-red-950/5 border-t border-red-900/20 p-4 text-center">
-            <span className="text-xs text-red-800 font-mono uppercase animate-pulse font-bold tracking-widest">
-              Tempo Restante: 14:02:59
+  const renderStatus = () => {
+    const missionLog = (
+      <div className="border border-zinc-800 relative overflow-hidden bg-black">
+        <div className="bg-zinc-900/50 p-3 sm:p-4 border-b border-zinc-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+            <span className="text-red-600 font-bold text-sm tracking-widest flex items-center gap-2 flex-wrap">
+              <AlertTriangle size={16} /> LOG DE MISSÕES
             </span>
+            <span className="text-[10px] text-zinc-500 font-mono bg-zinc-900 px-2 py-1 border border-zinc-800">
+              DIFICULDADE: E
+            </span>
+        </div>
+
+        <div className="p-4 sm:p-6">
+          <h3 className="text-xl sm:text-2xl text-zinc-100 mb-2 uppercase tracking-tight font-bold">Missão Diária: Preparação</h3>
+          <p className="text-zinc-500 text-xs font-mono mb-6 sm:mb-8 border-b border-zinc-900 pb-4 leading-relaxed">
+            Complete o treinamento físico para fortalecer seu receptáculo.
+            <span className="text-red-900/80">O fracasso resultará em punição severa na Zona de Penalidade.</span>
+          </p>
+
+          <div className="space-y-6">
+            {quests.map((quest) => {
+              const percent = (quest.current / quest.total) * 100;
+              return (
+                <div 
+                  key={quest.id} 
+                  onClick={() => toggleQuest(quest.id)}
+                  className={`group cursor-pointer select-none transition-all duration-300 ${quest.completed ? 'opacity-50 grayscale' : 'opacity-100'}`}
+                >
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-2">
+                    <span className="text-sm text-zinc-300 font-bold tracking-wider flex items-center gap-3 group-hover:text-red-500 transition-colors break-words">
+                      <div className={`w-5 h-5 border flex items-center justify-center transition-colors ${
+                        quest.completed ? 'bg-zinc-800 border-zinc-600' : 'border-zinc-700 bg-black group-hover:border-red-600'
+                      }`}>
+                        {quest.completed && <Check size={12} className="text-zinc-400" />}
+                      </div>
+                      <span className="flex-1 min-w-0 break-words">{quest.title}</span>
+                    </span>
+                    <span className="text-xs font-mono text-zinc-500 shrink-0">
+                      {quest.current}/{quest.total} {quest.unit}
+                    </span>
+                  </div>
+                  <div className="h-4 w-full bg-zinc-950 border border-zinc-900 relative overflow-hidden">
+                    <div 
+                      className={`h-full transition-all duration-500 ease-out ${quest.completed ? 'bg-zinc-600' : 'bg-red-900'}`}
+                      style={{ width: `${percent}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        <div className="bg-red-950/5 border-t border-red-900/20 p-4 text-center">
+          <span className="text-xs text-red-800 font-mono uppercase animate-pulse font-bold tracking-widest">
+            Tempo Restante: 14:02:59
+          </span>
+        </div>
+      </div>
+    );
+
+    const identityCard = (
+      <div className="border border-zinc-800 p-5 sm:p-6 space-y-6 bg-black relative overflow-hidden">
+          <div className="absolute top-4 right-6 flex flex-col items-center pointer-events-none opacity-90">
+            <span className="text-[10px] text-zinc-600 font-mono mb-[-5px]">RANK</span>
+            <span className="text-5xl sm:text-6xl font-black text-red-900 drop-shadow-[0_0_10px_rgba(127,29,29,0.5)]">E</span>
+          </div>
+
+          <div className="space-y-1 relative z-10">
+            <span className="text-[10px] text-zinc-600 font-mono block">NOME</span>
+            <span className="text-xl sm:text-2xl text-zinc-200 font-bold tracking-wide break-words leading-tight">{playerName}</span>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4 relative z-10">
+            <div className="space-y-1">
+              <span className="text-[10px] text-zinc-600 font-mono block">NÍVEL</span>
+              <span className="text-xl text-zinc-300 font-mono">1</span>
+            </div>
+            <div className="space-y-1">
+              <span className="text-[10px] text-zinc-600 font-mono block">CLASSE</span>
+              <span className="text-xl text-zinc-500 font-mono">NENHUMA</span>
+            </div>
+          </div>
+
+          <div className="space-y-1 relative z-10">
+            <span className="text-[10px] text-zinc-600 font-mono block">TÍTULO</span>
+            <span className="text-sm text-zinc-500 uppercase break-words">{playerTitle}</span>
+          </div>
+      </div>
+    );
+
+    const statsPanel = (
+      <div className="space-y-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          {INITIAL_STATS.map((stat) => (
+            <div key={stat.code} className="border border-zinc-900 p-3 sm:p-4 hover:border-red-900/30 transition-colors group bg-zinc-950/30 flex flex-col items-center justify-center text-center">
+              <div className="text-[10px] text-zinc-600 font-mono mb-2 group-hover:text-red-800 transition-colors">
+                {stat.code}
+              </div>
+              <div className="text-2xl sm:text-3xl font-bold text-zinc-300 font-mono">
+                {String(stat.value).padStart(2, '0')}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="w-full bg-zinc-900/30 border border-dashed border-zinc-800 p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 group hover:border-red-900/30 transition-colors">
+            <span className="text-xs text-zinc-500 font-mono uppercase tracking-widest">PONTOS DISPONÍVEIS</span>
+            <span className="text-xl font-bold font-mono text-red-600 animate-pulse">
+              0 <span className="inline-block w-2 h-4 bg-red-600 ml-1 animate-blink"></span>
+            </span>
+        </div>
+      </div>
+    );
+
+    return (
+      <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+        {/* MOBILE ORDER:
+            1) Log de missões
+            2) Card nome/rank/título
+            3) Pontos de status */}
+        <div className="lg:hidden space-y-6">
+          {missionLog}
+          {identityCard}
+          {statsPanel}
+        </div>
+
+        {/* DESKTOP LAYOUT */}
+        <div className="hidden lg:grid lg:grid-cols-12 gap-8">
+          <div className="lg:col-span-4 space-y-6">
+            <div className="border border-zinc-800 bg-zinc-900/10 p-1 relative aspect-square flex items-center justify-center overflow-hidden group">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-zinc-800/20 to-transparent opacity-50" />
+              <User size={64} className="text-zinc-800 group-hover:text-red-900/50 transition-colors duration-500" strokeWidth={1} />
+              <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-zinc-600" />
+              <div className="absolute top-0 right-0 w-2 h-2 border-t border-r border-zinc-600" />
+              <div className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-zinc-600" />
+              <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-zinc-600" />
+            </div>
+
+            {identityCard}
+
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <div className="flex justify-between text-[10px] font-mono text-zinc-500">
+                  <span>HP</span>
+                  <span>100/100</span>
+                </div>
+                <div className="h-3 w-full bg-zinc-950 border border-zinc-800">
+                  <div className="h-full bg-red-900 w-full shadow-[0_0_10px_rgba(127,29,29,0.3)]" />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <div className="flex justify-between text-[10px] font-mono text-zinc-500">
+                  <span>MP</span>
+                  <span>35/35</span>
+                </div>
+                <div className="h-3 w-full bg-zinc-950 border border-zinc-800">
+                  <div className="h-full bg-blue-900/60 w-full shadow-[0_0_10px_rgba(30,58,138,0.3)]" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="lg:col-span-8 space-y-8">
+            {statsPanel}
+            {missionLog}
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderRanking = () => (
     <div className="w-full max-w-4xl mx-auto animate-in fade-in zoom-in-95 duration-500">
