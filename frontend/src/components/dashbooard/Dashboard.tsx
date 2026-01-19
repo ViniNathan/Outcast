@@ -506,6 +506,9 @@ export const Dashboard: React.FC = () => {
             <button className="w-full py-4 bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:border-red-600 hover:bg-red-950/20 transition-all font-bold tracking-widest uppercase text-sm">
               Salvar Alterações
             </button>
+            <button className="w-full mt-4 py-4 bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:border-red-600 hover:bg-red-950/20 transition-all font-bold tracking-widest uppercase text-sm">
+              Logout
+            </button>
           </div>
        </div>
     </div>
