@@ -11,6 +11,7 @@
   },
   "scripts": {
     "db:push": "prisma db push",
+    "db:pull": "prisma db pull",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio"

@@ -24,6 +24,7 @@
     "dev:web": "bun run --filter web dev",
     "dev:server": "bun run --filter server dev",
     "db:push": "bun run --filter @backend/db db:push",
+    "db:pull": "bun run --filter @backend/db db:pull",
     "db:studio": "bun run --filter @backend/db db:studio",
     "db:generate": "bun run --filter @backend/db db:generate",
     "db:migrate": "bun run --filter @backend/db db:migrate",
@@ -32,6 +33,7 @@
   "dependencies": {
     "@backend/env": "workspace:*",
     "dotenv": "catalog:",
+    "supabase": "^2.72.8",
     "zod": "catalog:"
   },
   "devDependencies": {
