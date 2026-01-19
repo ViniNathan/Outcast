@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import Image from 'next/image';
 import { BOOT_SEQUENCE } from '@/utils/constants';
-import fallenArchitect from '@/assets/fallen_architect.png';
 
 interface TerminalEntryProps {
   onComplete: () => void;
@@ -10,8 +8,6 @@ interface TerminalEntryProps {
 export const TerminalEntry: React.FC<TerminalEntryProps> = ({ onComplete }) => {
   const [currentLineIndex, setCurrentLineIndex] = useState(0);
   const [showPrompt, setShowPrompt] = useState(false);
-  const [isSplashMounted, setIsSplashMounted] = useState(false);
-  const [isSplashVisible, setIsSplashVisible] = useState(false);
 
   useEffect(() => {
     if (currentLineIndex < BOOT_SEQUENCE.length) {
@@ -21,32 +17,9 @@ export const TerminalEntry: React.FC<TerminalEntryProps> = ({ onComplete }) => {
       return () => clearTimeout(timeout);
     } else {
       const timeout = setTimeout(() => {
-        // Mount splash (bottom-aligned) and fade it in
-        setIsSplashMounted(true);
-      }, 0);
-
-      const timeout2 = setTimeout(() => {
-        // Allow a tick so CSS transition can animate from 0 -> 100
-        setIsSplashVisible(true);
-      }, 30);
-
-      // Hold a bit, then fade out
-      const timeout3 = setTimeout(() => {
-        setIsSplashVisible(false);
-      }, 4000); // Image stays visible for 4 seconds before fade-out
-
-      // After fade-out completes, unmount splash and show prompt
-      const timeout4 = setTimeout(() => {
-        setIsSplashMounted(false);
         setShowPrompt(true);
-      }, 9000); // Wait for fade-out (5s) + buffer
-
-      return () => {
-        clearTimeout(timeout);
-        clearTimeout(timeout2);
-        clearTimeout(timeout3);
-        clearTimeout(timeout4);
-      };
+      }, 500);
+      return () => clearTimeout(timeout);
     }
   }, [currentLineIndex]);
 
@@ -70,25 +43,6 @@ export const TerminalEntry: React.FC<TerminalEntryProps> = ({ onComplete }) => {
           <h1 className={`text-2xl md:text-4xl font-mono tracking-widest uppercase text-center ${getLineColor(currentLine)}`}>
             {currentLine}
           </h1>
-        </div>
-      )}
-
-      {/* Boot splash image (after sequence, before prompt) */}
-      {!showPrompt && isSplashMounted && currentLineIndex >= BOOT_SEQUENCE.length && (
-        <div
-          className={`fixed inset-x-0 bottom-0 z-50 pointer-events-none transition-opacity duration-5000 ${
-            isSplashVisible ? 'opacity-100' : 'opacity-0'
-          }`}
-        >
-          <div className="relative w-full h-[42vh] md:h-[80vh]">
-            <Image
-              src={fallenArchitect}
-              alt="Fallen Architect"
-              priority
-              fill
-              className="object-contain object-bottom"
-            />
-          </div>
         </div>
       )}
       
