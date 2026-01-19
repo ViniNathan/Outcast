@@ -9,8 +9,106 @@ datasource db {
   provider = "postgresql"
 }
 
-/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
-model test {
-  id         BigInt   @id @default(autoincrement())
-  created_at DateTime @default(now()) @db.Timestamptz(6)
+enum MissionType {
+  DAILY
+  WEEKLY
+}
+
+enum MissionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+enum LogType {
+  INFO
+  WARNING
+  SUCCESS
+  FAILURE
+}
+
+model User {
+  id         String   @id @default(cuid())
+  authUserId String   @unique
+  name       String
+  age        Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
+
+  player Player?
+
+  @@index([authUserId])
+}
+
+model Player {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  xp           Int      @default(0)
+  level        Int      @default(1)
+  class        String   @default("OUTCAST")
+  rank         Int      @default(0)
+  lastActiveAt DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @default(now()) @updatedAt
+
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  objectives Objective[]
+  missions   Mission[]
+  logs       SystemLog[]
+  rankings   Ranking[]
+
+  @@index([level, xp, createdAt])
+}
+
+model Objective {
+  id          String   @id @default(cuid())
+  playerId    String
+  description String
+  createdAt   DateTime @default(now())
+
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@index([playerId, createdAt])
+}
+
+model Mission {
+  id          String        @id @default(cuid())
+  playerId    String
+  type        MissionType
+  status      MissionStatus @default(PENDING)
+  description String
+  xpReward    Int
+  penaltyXp   Int
+  expiresAt   DateTime
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @default(now()) @updatedAt
+
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@index([playerId, status, expiresAt])
+}
+
+model SystemLog {
+  id        String   @id @default(cuid())
+  playerId  String
+  message   String
+  type      LogType
+  createdAt DateTime @default(now())
+
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@index([playerId, createdAt])
+}
+
+model Ranking {
+  id           String   @id @default(cuid())
+  playerId     String
+  position     Int
+  snapshotDate DateTime
+  createdAt    DateTime @default(now())
+
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@index([snapshotDate])
+  @@index([playerId, snapshotDate])
 }

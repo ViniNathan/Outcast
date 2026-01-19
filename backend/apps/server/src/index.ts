@@ -97,6 +97,16 @@ new Elysia()
   .group("/api", (app) =>
     app
       .post("/objective", async (context) => {
+        // Proteção simples (opcional) para evitar que qualquer origem crie registros no seu backend.
+        // Configure BACKEND_SYNC_SECRET no backend e BACKEND_SYNC_SECRET no frontend (Next API proxy).
+        if (env.BACKEND_SYNC_SECRET) {
+          const provided = context.request.headers.get("x-sync-secret");
+          if (provided !== env.BACKEND_SYNC_SECRET) {
+            context.set.status = 401;
+            return { error: "Nao autorizado" };
+          }
+        }
+
         const parsed = createObjectiveSchema.safeParse(context.body);
 
         if (!parsed.success) {

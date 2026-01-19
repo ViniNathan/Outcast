@@ -6,6 +6,7 @@ export const env = createEnv({
   server: {
     DATABASE_URL: z.string().min(1),
     CORS_ORIGIN: z.url(),
+    BACKEND_SYNC_SECRET: z.string().min(1).optional(),
     NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
     PORT: z.coerce.number().default(3000),
   },

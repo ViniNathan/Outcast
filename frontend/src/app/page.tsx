@@ -50,18 +50,61 @@ const App: React.FC = () => {
         console.error('Erro ao salvar no localStorage:', e);
       }
 
-      // Se existir um perfil pendente criado no registro antes do login, "promove" após autenticar
+      // Se existir um perfil criado no registro antes do login, tenta sincronizar com o backend
+      // e depois "promove" localmente para um storage por usuário.
       try {
-        const pending = window.localStorage.getItem('outcast_profile_pending');
-        if (pending && session?.user?.id) {
-          const key = `outcast_profile_v1:${session.user.id}`;
-          if (!window.localStorage.getItem(key)) {
+        if (session?.user?.id) {
+          const userId = session.user.id;
+          const pending = window.localStorage.getItem('outcast_profile_pending');
+          const key = `outcast_profile_v1:${userId}`;
+          const syncedKey = `outcast_profile_synced_v1:${userId}`;
+
+          // Primeiro, garante que existe um "perfil por usuário" (para poder tentar sync depois)
+          if (pending && !window.localStorage.getItem(key)) {
             window.localStorage.setItem(key, pending);
           }
-          window.localStorage.removeItem('outcast_profile_pending');
+
+          // Agora tenta sincronizar (se ainda não sincronizou)
+          const source = pending ?? window.localStorage.getItem(key);
+          if (source && !window.localStorage.getItem(syncedKey)) {
+            void (async () => {
+              try {
+                const parsed = JSON.parse(source) as {
+                  nome?: string;
+                  idade?: number;
+                  objetivo?: string;
+                };
+
+                const resp = await fetch('/api/profile/sync', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    nome: parsed?.nome,
+                    idade: parsed?.idade,
+                    objetivo: parsed?.objetivo,
+                  }),
+                });
+
+                if (resp.ok) {
+                  window.localStorage.setItem(syncedKey, 'true');
+                  // Só remove o pending quando der certo (senão, permite retry)
+                  if (pending) {
+                    window.localStorage.removeItem('outcast_profile_pending');
+                  }
+                } else {
+                  console.error(
+                    'Falha ao sincronizar perfil com backend:',
+                    await resp.text(),
+                  );
+                }
+              } catch (e) {
+                console.error('Erro ao sincronizar perfil com backend:', e);
+              }
+            })();
+          }
         }
       } catch (e) {
-        console.error('Erro ao sincronizar perfil pendente:', e);
+        console.error('Erro ao sincronizar/promover perfil pendente:', e);
       }
 
       setSystemState('DASHBOARD');
