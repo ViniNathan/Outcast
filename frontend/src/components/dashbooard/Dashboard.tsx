@@ -19,7 +19,7 @@ const DEFAULT_STATS: PlayerStat[] = [
 const GENERATION_MESSAGES = [
   'INICIANDO PROTOCOLO DE GERAÇÃO...',
   'ANALISANDO PERFIL DO RECEPTÁCULO...',
-  'CONSULTANDO O ARQUITETO...',
+  'CONSULTANDO O ORÁCULO...',
   'CALCULANDO DIFICULDADE APROPRIADA...',
   'AVALIANDO HISTÓRICO DE DESEMPENHO...',
   'PROCESSANDO DADOS DE ATRIBUTOS...',
@@ -618,7 +618,7 @@ export const Dashboard: React.FC = () => {
             
             {/* Texto secundário */}
             <div className="text-[10px] font-mono text-zinc-700 uppercase tracking-widest">
-              O Arquiteto está deliberando...
+              O Oráculo está deliberando...
             </div>
           </div>
         )}
