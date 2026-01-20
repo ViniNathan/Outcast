@@ -589,7 +589,7 @@ export const Dashboard: React.FC = () => {
             </button>
           </div>
 
-          <div className="space-y-6 max-h-[200px] overflow-y-auto custom-scrollbar pr-2">
+          <div className="space-y-6 max-h-[320px] overflow-y-auto custom-scrollbar pr-2">
             {missions.map((mission) => {
               const percent = mission.progressTarget > 0 ? (mission.progressCurrent / mission.progressTarget) * 100 : 0;
               const isCompleted = mission.status === 'COMPLETED';
