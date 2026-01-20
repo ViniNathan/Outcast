@@ -160,16 +160,22 @@ export function AuthCard({
         </div>
       </div>
 
-      {mode === "register" && (
-        <div className="mt-4 text-center">
-          <Link
-            href="/login"
-            className="text-md text-zinc-500 hover:text-zinc-300 transition-colors font-mono"
-          >
-            Já tem uma conta? <span className="underline">Entre aqui</span>
-          </Link>
-        </div>
-      )}
+      <div className="mt-4 text-center">
+        <Link
+          href={mode === "login" ? "/register" : "/login"}
+          className="text-md text-zinc-500 hover:text-zinc-300 transition-colors font-mono"
+        >
+          {mode === "login" ? (
+            <>
+              Não tem acesso? <span className="underline">Solicitar registro</span>
+            </>
+          ) : (
+            <>
+              Já tem uma conta? <span className="underline">Acessar sistema</span>
+            </>
+          )}
+        </Link>
+      </div>
     </div>
   );
 }
