@@ -108,12 +108,12 @@ export function AuthCard({
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-[10px] font-mono uppercase tracking-widest text-zinc-600 block">
+                <label className="text-[10px] font-mono uppercase tracking-widest text-zinc-600 block" htmlFor="idade">
                   Ciclo Biológico (Idade)
                 </label>
                 <input
                   value={idade}
-                  onChange={(e) => setIdade(e.target.value)}
+                  onChange={(e) => setIdade(e.target.value.replace(/\D/g, ""))}
                   inputMode="numeric"
                   className="w-full bg-black border border-zinc-800 p-3 text-zinc-300 font-mono text-sm placeholder:text-zinc-700 focus:border-red-900/50 focus:outline-none transition-colors"
                   placeholder="00"
