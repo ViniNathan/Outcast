@@ -1,6 +1,7 @@
 "use client";
 
 import { signIn } from "next-auth/react";
+import Link from "next/link";
 import { useMemo, useState } from "react";
 
 type Mode = "login" | "register";
@@ -22,11 +23,11 @@ export function AuthCard({
   mode: Mode;
   error?: string;
 }) {
-  const title = mode === "login" ? "Entrar" : "Criar conta";
+  const title = mode === "login" ? "ACESSO AO SISTEMA" : "REGISTRO OBRIGATÓRIO";
   const subtitle =
     mode === "login"
-      ? "Acesse sua conta para continuar."
-      : "Crie sua conta com o Google e finalize seu perfil.";
+      ? "Identifique-se para prosseguir."
+      : "O sistema requer seus dados biométricos e psicológicos.";
 
   const [nome, setNome] = useState("");
   const [idade, setIdade] = useState("");
@@ -71,13 +72,16 @@ export function AuthCard({
   };
 
   return (
-    <div className="flex min-h-[calc(100vh-0px)] items-center justify-center bg-black px-4">
-      <div className="w-full max-w-md border border-zinc-800 bg-black/80 p-6 backdrop-blur">
-        <div className="space-y-2">
+    <div className="flex min-h-[calc(100vh-0px)] flex-col items-center justify-center bg-black px-4">
+      <div className="w-full max-w-md border border-zinc-900 bg-black/95 p-8 relative overflow-hidden">
+        {/* Decorative elements */}
+        <div className="absolute top-0 left-0 w-1 h-16 bg-red-900/80"></div>
+        
+        <div className="space-y-2 mb-8 border-l-4 border-red-900/80 pl-4">
           <h1 className="text-2xl font-bold tracking-tight text-zinc-100 font-mono uppercase">
             {title}
           </h1>
-          <p className="text-sm leading-6 text-zinc-500 font-mono">
+          <p className="text-xs text-zinc-500 font-mono uppercase tracking-wide">
             {subtitle}
           </p>
         </div>
@@ -89,60 +93,76 @@ export function AuthCard({
         ) : null}
 
         {mode === "register" ? (
-          <div className="mt-6 space-y-4">
+          <div className="mt-8 space-y-5">
             <div className="space-y-2">
-              <label className="text-[10px] font-mono uppercase tracking-widest text-zinc-600">
-                Nome
+              <label className="text-[10px] font-mono uppercase tracking-widest text-red-900/80 block">
+                Identificação do Receptáculo
               </label>
               <input
                 value={nome}
                 onChange={(e) => setNome(e.target.value)}
-                className="w-full bg-black border border-zinc-800 p-3 text-zinc-200 font-mono text-sm focus:border-red-900 focus:outline-none transition-colors"
-                placeholder="Seu nome"
+                className="w-full bg-black border border-zinc-800 p-3 text-zinc-300 font-mono text-sm placeholder:text-zinc-700 focus:border-red-900/50 focus:outline-none transition-colors uppercase"
+                placeholder="SEU NOME / APELIDO"
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-mono uppercase tracking-widest text-zinc-600">
-                Idade
-              </label>
-              <input
-                value={idade}
-                onChange={(e) => setIdade(e.target.value)}
-                inputMode="numeric"
-                className="w-full bg-black border border-zinc-800 p-3 text-zinc-200 font-mono text-sm focus:border-red-900 focus:outline-none transition-colors"
-                placeholder="Ex: 24"
-              />
-            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-mono uppercase tracking-widest text-zinc-600 block">
+                  Ciclo Biológico (Idade)
+                </label>
+                <input
+                  value={idade}
+                  onChange={(e) => setIdade(e.target.value)}
+                  inputMode="numeric"
+                  className="w-full bg-black border border-zinc-800 p-3 text-zinc-300 font-mono text-sm placeholder:text-zinc-700 focus:border-red-900/50 focus:outline-none transition-colors"
+                  placeholder="00"
+                />
+              </div>
 
-            <div className="space-y-2">
-              <label className="text-[10px] font-mono uppercase tracking-widest text-zinc-600">
-                Objetivo
-              </label>
-              <input
-                value={objetivo}
-                onChange={(e) => setObjetivo(e.target.value)}
-                className="w-full bg-black border border-zinc-800 p-3 text-zinc-200 font-mono text-sm focus:border-red-900 focus:outline-none transition-colors"
-                placeholder="Ex: Ganhar massa / Disciplina / Emagrecer"
-              />
+              <div className="space-y-2">
+                <label className="text-[10px] font-mono uppercase tracking-widest text-red-900/80 block">
+                  Diretriz Primária
+                </label>
+                <input
+                  value={objetivo}
+                  onChange={(e) => setObjetivo(e.target.value)}
+                  className="w-full bg-black border border-zinc-800 p-3 text-zinc-300 font-mono text-sm placeholder:text-zinc-700 focus:border-red-900/50 focus:outline-none transition-colors uppercase"
+                  placeholder="SOBREVIVÊNCIA"
+                />
+              </div>
             </div>
           </div>
+          
         ) : null}
 
-        <div className="mt-6 space-y-3">
+        <div className="mt-8 space-y-4">
           <button
             type="button"
             onClick={handleContinue}
-            className="inline-flex h-11 w-full items-center justify-center border border-zinc-800 bg-zinc-950 px-4 text-xs font-bold text-zinc-200 transition hover:border-red-600 hover:text-red-500 uppercase tracking-widest font-mono"
+            className="group relative inline-flex h-14 w-full items-center justify-center overflow-hidden bg-red-900/20 border border-red-900/30 text-red-500 font-mono font-bold uppercase tracking-widest transition-all hover:bg-red-900/30 hover:text-red-400 hover:border-red-900/50"
           >
-            Continuar com Google
+            <span className="relative z-10 flex items-center gap-2">
+              {mode === "login" ? "Acessar Sistema" : "Inicializar Sistema"}
+            </span>
           </button>
 
-          <p className="text-center text-xs text-zinc-600 font-mono">
-            Ao continuar, você concorda com os termos e política de privacidade.
+          <p className="text-center text-[10px] text-zinc-700 font-mono uppercase tracking-wider">
+            Ao continuar, você concorda com os protocolos de segurança.
           </p>
         </div>
       </div>
+
+      {mode === "register" && (
+        <div className="mt-4 text-center">
+          <Link
+            href="/login"
+            className="text-md text-zinc-500 hover:text-zinc-300 transition-colors font-mono"
+          >
+            Já tem uma conta? <span className="underline">Entre aqui</span>
+          </Link>
+        </div>
+      )}
     </div>
   );
 }
