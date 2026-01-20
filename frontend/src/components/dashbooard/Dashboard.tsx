@@ -567,13 +567,13 @@ export const Dashboard: React.FC = () => {
             </span>
         </div>
 
-        <div className="p-4 sm:p-6">
+        <div className="p-4 sm:p-5 flex-1 flex flex-col">
           <h3 className="text-xl sm:text-2xl text-zinc-100 mb-2 uppercase tracking-tight font-bold">Missões ativas</h3>
-          <p className="text-zinc-500 text-xs font-mono mb-6 sm:mb-8 border-b border-zinc-900 pb-4 leading-relaxed">
+          <p className="text-zinc-500 text-xs font-mono mb-4 border-b border-zinc-900 pb-3 leading-relaxed">
             O sistema emite tarefas mensuráveis. Conclua e receba XP. Falhe e aceite a penalidade.
           </p>
 
-          <div className="mb-6 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between border border-zinc-900 bg-zinc-950/30 p-4">
+          <div className="mb-4 flex flex-col sm:flex-row gap-2 items-start sm:items-center justify-between border border-zinc-900 bg-zinc-950/30 p-3">
             <div className="text-xs font-mono text-zinc-500 uppercase tracking-widest">
               Geração automática
               <span className={autoMissionGeneration ? "text-green-700 ml-2" : "text-red-700 ml-2"}>
@@ -667,22 +667,22 @@ export const Dashboard: React.FC = () => {
           <div className="grid grid-cols-2 gap-4 relative z-10">
             <div className="space-y-1">
               <span className="text-[10px] text-zinc-600 font-mono block">NÍVEL</span>
-              <span className="text-xl text-zinc-300 font-mono">{playerLevel}</span>
+              <span className="text-xl lg:text-2xl text-zinc-300 font-mono">{playerLevel}</span>
             </div>
             <div className="space-y-1">
               <span className="text-[10px] text-zinc-600 font-mono block">CLASSE</span>
-              <span className="text-xl text-zinc-500 font-mono">{playerClass}</span>
+              <span className="text-xl lg:text-2xl text-zinc-500 font-mono">{playerClass}</span>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4 relative z-10">
             <div className="space-y-1">
               <span className="text-[10px] text-zinc-600 font-mono block">POSIÇÃO</span>
-              <span className="text-xl text-zinc-300 font-mono">{playerRankingPosition ?? '--'}</span>
+              <span className="text-xl lg:text-2xl text-zinc-300 font-mono">{playerRankingPosition ?? '--'}</span>
             </div>
             <div className="space-y-1">
               <span className="text-[10px] text-zinc-600 font-mono block">MISSÕES</span>
-              <span className="text-xl text-zinc-500 font-mono">
+              <span className="text-xl lg:text-2xl text-zinc-500 font-mono">
                 {missions.filter((m) => m.status === 'PENDING').length}
               </span>
             </div>
@@ -713,12 +713,12 @@ export const Dashboard: React.FC = () => {
     );
 
     return (
-      <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+      <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 w-full max-w-6xl mx-auto">
         {/* MOBILE ORDER:
             1) Log de missões
             2) Card nome/rank/título
             3) Pontos de status */}
-        <div className="lg:hidden space-y-6">
+        <div className="lg:hidden space-y-4">
           {missionLog}
           {identityCard}
           {statsPanel}
@@ -739,9 +739,9 @@ export const Dashboard: React.FC = () => {
             {identityCard}
           </div>
 
-          <div className="lg:col-span-8 space-y-8">
-            {statsPanel}
+          <div className="lg:col-span-8 space-y-6 flex flex-col">
             {missionLog}
+            {statsPanel}
           </div>
         </div>
       </div>
@@ -1032,7 +1032,7 @@ export const Dashboard: React.FC = () => {
   }
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 md:px-6 py-10 md:py-16">
+    <div className="w-full h-[100dvh] max-w-7xl mx-auto px-4 md:px-6 flex flex-col overflow-hidden">
       
       {/* TOP NAVIGATION */}
       <nav className="fixed top-0 w-full left-0 right-0 z-50 flex justify-center border-b border-zinc-900 bg-black/90 backdrop-blur supports-[backdrop-filter]:bg-black/70">
@@ -1213,11 +1213,13 @@ export const Dashboard: React.FC = () => {
       </div>
 
       {/* CONTENT AREA */}
-      <main className="min-h-[600px] pt-20 pb-16">
-        {activeTab === 'STATUS' && renderStatus()}
-        {activeTab === 'RANKING' && renderRanking()}
-        {activeTab === 'ORACLE' && renderOracle()}
-        {activeTab === 'PROFILE' && renderProfile()}
+      <main className="flex-1 pt-16 md:pt-14 overflow-y-auto custom-scrollbar flex flex-col">
+        <div className="py-4 md:py-8 flex-1 flex flex-col justify-center">
+          {activeTab === 'STATUS' && renderStatus()}
+          {activeTab === 'RANKING' && renderRanking()}
+          {activeTab === 'ORACLE' && renderOracle()}
+          {activeTab === 'PROFILE' && renderProfile()}
+        </div>
       </main>
 
       {/* MISSION DETAIL MODAL */}
