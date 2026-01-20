@@ -226,8 +226,9 @@ async function generateMissionFromChain({
       },
     });
 
-    if (recentRequests >= 1) {
-      return { error: "Limite diario atingido", status: 429 };
+    const DAILY_LIMIT = 20; // Altere aqui o limite diário para não-premium
+    if (recentRequests >= DAILY_LIMIT) {
+      return { error: `Limite diario atingido (${DAILY_LIMIT}/dia)`, status: 429 };
     }
   }
 
@@ -537,35 +538,48 @@ new Elysia()
         return { mission: result.mission, fallback: result.fallback };
       })
       .post("/missions/request", async (context) => {
-        const parsed = requestMissionSchema.safeParse(context.body);
+        console.log("[POST /missions/request] Iniciando...");
+        try {
+          const parsed = requestMissionSchema.safeParse(context.body);
 
-        if (!parsed.success) {
-          context.set.status = 400;
-          return { error: parsed.error.flatten() };
-        }
+          if (!parsed.success) {
+            console.log("[POST /missions/request] Validação falhou:", parsed.error.flatten());
+            context.set.status = 400;
+            return { error: parsed.error.flatten() };
+          }
 
-        const { playerId, message } = parsed.data;
-        const result = await generateMissionFromChain({
-          playerId,
-          message,
-          source: MISSION_SOURCES.USER_REQUEST,
-          enforceRateLimit: true,
-        });
-
-        if ("error" in result && result.error) {
-          context.set.status = result.status ?? 400;
-          return { error: result.error };
-        }
-
-        await prisma.systemLog.create({
-          data: {
+          const { playerId, message } = parsed.data;
+          console.log("[POST /missions/request] playerId:", playerId, "message:", message);
+          
+          const result = await generateMissionFromChain({
             playerId,
-            message: "User-requested mission generated.",
-            type: LOG_TYPES.INFO,
-          },
-        });
+            message,
+            source: MISSION_SOURCES.USER_REQUEST,
+            enforceRateLimit: true,
+          });
 
-        return { mission: result.mission, fallback: result.fallback };
+          console.log("[POST /missions/request] Resultado da chain:", JSON.stringify(result, null, 2));
+
+          if ("error" in result && result.error) {
+            console.log("[POST /missions/request] Erro retornado:", result.error);
+            context.set.status = result.status ?? 400;
+            return { error: result.error };
+          }
+
+          await prisma.systemLog.create({
+            data: {
+              playerId,
+              message: "User-requested mission generated.",
+              type: LOG_TYPES.INFO,
+            },
+          });
+
+          return { mission: result.mission, fallback: result.fallback };
+        } catch (err) {
+          console.error("[POST /missions/request] EXCEÇÃO:", err);
+          context.set.status = 500;
+          return { error: "Erro interno ao gerar missão", details: String(err) };
+        }
       })
       .post("/missions/generate", async (context) => {
         const parsed = autoGenerateMissionsSchema.safeParse(context.body);

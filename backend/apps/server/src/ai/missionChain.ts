@@ -1,6 +1,5 @@
 import { env } from "@backend/env/server";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
-import { RunnableSequence } from "@langchain/core/runnables";
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { BufferMemory } from "@langchain/classic/memory";
 import { z } from "zod";
@@ -21,6 +20,8 @@ export const missionProposalSchema = z.object({
 
 export type MissionProposal = z.infer<typeof missionProposalSchema>;
 
+// Prompt que pede JSON explícito (Gemini não suporta strict structured output como OpenAI)
+// Nota: {{ e }} são escapes para chaves literais no LangChain template
 const prompt = ChatPromptTemplate.fromMessages([
   [
     "system",
@@ -37,7 +38,18 @@ Safety:
 - If the user is under 18, avoid any intense physical effort missions. Prefer light, safe, low-risk tasks.
 - Never propose dangerous activities.
 
-Return ONLY the structured JSON output.`,
+You MUST respond with ONLY a valid JSON object matching this exact schema (no markdown, no explanation):
+{{
+  "title": "string (min 3 chars)",
+  "description": "string (min 10 chars)",
+  "category": "daily" | "weekly" | "monthly",
+  "difficulty": "E" | "D" | "C" | "B" | "A" | "S",
+  "progress": {{
+    "target": number (positive integer),
+    "unit": "string (min 1 char)"
+  }},
+  "attributesFocus": ["string"] (max 4 items, from: discipline, strength, focus, consistency)
+}}`,
   ],
   [
     "human",
@@ -49,22 +61,17 @@ Return ONLY the structured JSON output.`,
 - Objective: {objective}
 - Recent missions (last 7 days): {history}
 - Short memory: {memory}
-- User message (optional): {message}`,
+- User message (optional): {message}
+
+Generate ONE mission. Respond with ONLY the JSON object.`,
   ],
 ]);
 
 const model = new ChatGoogleGenerativeAI({
   apiKey: env.GOOGLE_API_KEY,
-  model: env.GOOGLE_MODEL ?? "gemini-2.5-flash",
+  model: env.GOOGLE_MODEL ?? "gemini-2.0-flash",
   temperature: 0,
 });
-
-const structuredModel = model.withStructuredOutput(missionProposalSchema, {
-  name: "mission_proposal",
-  strict: true,
-});
-
-const chain = RunnableSequence.from([prompt, structuredModel]);
 
 // Memória curta: mantemos BufferMemory, mas com janela controlada.
 const MEMORY_WINDOW = 4;
@@ -96,6 +103,21 @@ async function rebuildShortMemory() {
   }
 }
 
+function extractJsonFromResponse(text: string): unknown {
+  // Tenta extrair JSON de blocos de código ou do texto direto
+  const codeBlockMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (codeBlockMatch?.[1]) {
+    return JSON.parse(codeBlockMatch[1].trim());
+  }
+  // Tenta encontrar o primeiro { e último }
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start !== -1 && end !== -1 && end > start) {
+    return JSON.parse(text.slice(start, end + 1));
+  }
+  return JSON.parse(text);
+}
+
 export async function generateMissionProposal(input: MissionProposalInput) {
   const memoryVars = await shortMemory.loadMemoryVariables({});
   const payload = {
@@ -109,11 +131,31 @@ export async function generateMissionProposal(input: MissionProposalInput) {
     message: input.message?.trim() ? input.message : "none",
   };
 
+  console.log("[MissionChain] Iniciando geração de missão...");
+  console.log("[MissionChain] Payload:", JSON.stringify(payload, null, 2));
+
   let lastError: unknown;
 
   for (let attempt = 0; attempt < 3; attempt += 1) {
+    console.log(`[MissionChain] Tentativa ${attempt + 1}/3`);
     try {
-      const proposal = (await chain.invoke(payload)) as MissionProposal;
+      // Invoca o prompt e modelo diretamente (sem structured output)
+      const formattedPrompt = await prompt.formatMessages(payload);
+      console.log("[MissionChain] Prompt formatado, invocando modelo...");
+      
+      const response = await model.invoke(formattedPrompt);
+      const content = typeof response.content === "string" 
+        ? response.content 
+        : JSON.stringify(response.content);
+      
+      console.log("[MissionChain] Resposta do modelo:", content.slice(0, 500));
+      
+      // Parseia e valida com Zod
+      const parsed = extractJsonFromResponse(content);
+      console.log("[MissionChain] JSON extraído:", JSON.stringify(parsed, null, 2));
+      
+      const proposal = missionProposalSchema.parse(parsed);
+      console.log("[MissionChain] Validação Zod OK:", proposal.title);
 
       // Atualiza janela de memória e reconstrói BufferMemory (curto prazo).
       memoryWindow.push({
@@ -123,12 +165,17 @@ export async function generateMissionProposal(input: MissionProposalInput) {
       while (memoryWindow.length > MEMORY_WINDOW) memoryWindow.shift();
       await rebuildShortMemory();
 
+      console.log("[MissionChain] Missão gerada com sucesso (fallback=false)");
       return { proposal, fallback: false };
     } catch (error) {
       lastError = error;
+      console.error(`[MissionChain] Erro na tentativa ${attempt + 1}:`, error);
     }
   }
 
+  console.error("[MissionChain] Todas as tentativas falharam, usando fallback");
+  console.error("[MissionChain] Último erro:", lastError);
+  
   return {
     proposal: buildFallbackMissionProposal(input.objective),
     fallback: true,
