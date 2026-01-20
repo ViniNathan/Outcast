@@ -124,12 +124,19 @@ export function AuthCard({
                 <label className="text-[10px] font-mono uppercase tracking-widest text-red-900/80 block">
                   Diretriz Primária
                 </label>
-                <input
+                <select
                   value={objetivo}
                   onChange={(e) => setObjetivo(e.target.value)}
-                  className="w-full bg-black border border-zinc-800 p-3 text-zinc-300 font-mono text-sm placeholder:text-zinc-700 focus:border-red-900/50 focus:outline-none transition-colors uppercase"
-                  placeholder="SOBREVIVÊNCIA"
-                />
+                  className="w-full bg-black border border-zinc-800 p-3 text-zinc-300 font-mono text-sm focus:border-red-900/50 focus:outline-none transition-colors uppercase appearance-none cursor-pointer"
+                >
+                  <option value="" disabled className="text-zinc-700">SELECIONE</option>
+                  <option value="Sobrevivência">Sobrevivência</option>
+                  <option value="Força Bruta">Força Bruta</option>
+                  <option value="Inteligência">Inteligência</option>
+                  <option value="Velocidade">Velocidade</option>
+                  <option value="Vingança">Vingança</option>
+                  <option value="Conquista Global">Conquista Global</option>
+                </select>
               </div>
             </div>
           </div>
