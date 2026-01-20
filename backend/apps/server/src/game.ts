@@ -7,10 +7,32 @@ export const PLAYER_CLASSES = {
   DOMINANT: "DOMINANT",
 } as const;
 
-export const MISSION_TYPES = {
+export const MISSION_CATEGORIES = {
   DAILY: "DAILY",
   WEEKLY: "WEEKLY",
+  MONTHLY: "MONTHLY",
 } as const;
+
+export const MISSION_DIFFICULTIES = {
+  E: "E",
+  D: "D",
+  C: "C",
+  B: "B",
+  A: "A",
+  S: "S",
+} as const;
+
+export const MISSION_SOURCES = {
+  AUTOMATIC: "AUTOMATIC",
+  USER_REQUEST: "USER_REQUEST",
+} as const;
+
+export const ATTRIBUTE_KEYS = [
+  "discipline",
+  "strength",
+  "focus",
+  "consistency",
+] as const;
 
 export const LOG_TYPES = {
   INFO: "INFO",
@@ -56,62 +78,122 @@ function addDays(date: Date, days: number) {
   return next;
 }
 
-export function getExpiresAtForType(type: string, now = new Date()) {
-  if (type === MISSION_TYPES.WEEKLY) {
+export function getExpiresAtForCategory(category: string, now = new Date()) {
+  if (category === MISSION_CATEGORIES.WEEKLY) {
     return addDays(now, 7);
+  }
+
+  if (category === MISSION_CATEGORIES.MONTHLY) {
+    return addDays(now, 30);
   }
 
   return addDays(now, 1);
 }
 
-export function buildInitialMissions(objectiveDescription: string, now = new Date()) {
-  return [
-    {
-      type: MISSION_TYPES.DAILY,
-      description: `Definir a primeira acao para: ${objectiveDescription}`,
-      xpReward: 50,
-      penaltyXp: 20,
-      expiresAt: getExpiresAtForType(MISSION_TYPES.DAILY, now),
-    },
-    {
-      type: MISSION_TYPES.DAILY,
-      description: `Executar um passo concreto em: ${objectiveDescription}`,
-      xpReward: 60,
-      penaltyXp: 25,
-      expiresAt: getExpiresAtForType(MISSION_TYPES.DAILY, now),
-    },
-    {
-      type: MISSION_TYPES.WEEKLY,
-      description: `Concluir um marco semanal de: ${objectiveDescription}`,
-      xpReward: 150,
-      penaltyXp: 60,
-      expiresAt: getExpiresAtForType(MISSION_TYPES.WEEKLY, now),
-    },
-  ];
+const DIFFICULTY_MULTIPLIER: Record<string, number> = {
+  [MISSION_DIFFICULTIES.E]: 1,
+  [MISSION_DIFFICULTIES.D]: 2,
+  [MISSION_DIFFICULTIES.C]: 3,
+  [MISSION_DIFFICULTIES.B]: 4,
+  [MISSION_DIFFICULTIES.A]: 5,
+  [MISSION_DIFFICULTIES.S]: 6,
+};
+
+const CATEGORY_MULTIPLIER: Record<string, number> = {
+  [MISSION_CATEGORIES.DAILY]: 1,
+  [MISSION_CATEGORIES.WEEKLY]: 2.5,
+  [MISSION_CATEGORIES.MONTHLY]: 5,
+};
+
+export function calculateXpReward(difficulty: string, category: string) {
+  const base = (DIFFICULTY_MULTIPLIER[difficulty] ?? 1) * 50;
+  const multiplier = CATEGORY_MULTIPLIER[category] ?? 1;
+  return Math.round(base * multiplier);
 }
 
-export function buildGeneratedMissions(objectiveDescription: string, now = new Date()) {
+export function calculateXpPenalty(xpReward: number) {
+  return Math.round(xpReward * 0.5);
+}
+
+export function buildAttributeRewards(attributesFocus: string[], category: string) {
+  const base =
+    category === MISSION_CATEGORIES.MONTHLY
+      ? 3
+      : category === MISSION_CATEGORIES.WEEKLY
+        ? 2
+        : 1;
+
+  const rewards: Record<string, number> = {
+    discipline: 0,
+    strength: 0,
+    focus: 0,
+    consistency: 0,
+  };
+
+  const normalized = attributesFocus
+    .map((item) => item.toLowerCase())
+    .filter((item) => ATTRIBUTE_KEYS.includes(item as (typeof ATTRIBUTE_KEYS)[number]));
+
+  if (normalized.length === 0) {
+    rewards.consistency = base;
+    return rewards;
+  }
+
+  for (const key of normalized) {
+    rewards[key] = (rewards[key] ?? 0) + base;
+  }
+
+  return rewards;
+}
+
+export function buildFallbackMissionProposal(objectiveDescription: string) {
+  return {
+    title: "Operacao de contingencia",
+    description: `Executar uma tarefa simples ligada a: ${objectiveDescription}`,
+    category: "daily",
+    difficulty: "E",
+    progress: {
+      target: 1,
+      unit: "acao",
+    },
+    attributesFocus: ["consistency"],
+  };
+}
+
+export function buildInitialMissions(objectiveDescription: string) {
   return [
     {
-      type: MISSION_TYPES.DAILY,
-      description: `Revisar prioridades ligadas a: ${objectiveDescription}`,
-      xpReward: 40,
-      penaltyXp: 20,
-      expiresAt: getExpiresAtForType(MISSION_TYPES.DAILY, now),
+      title: "Primeira acao",
+      description: `Definir a primeira acao para: ${objectiveDescription}`,
+      category: "daily",
+      difficulty: "E",
+      progress: {
+        target: 1,
+        unit: "acao",
+      },
+      attributesFocus: ["discipline"],
     },
     {
-      type: MISSION_TYPES.DAILY,
-      description: `Entregar uma tarefa ligada a: ${objectiveDescription}`,
-      xpReward: 70,
-      penaltyXp: 30,
-      expiresAt: getExpiresAtForType(MISSION_TYPES.DAILY, now),
+      title: "Passo concreto",
+      description: `Executar um passo concreto em: ${objectiveDescription}`,
+      category: "daily",
+      difficulty: "D",
+      progress: {
+        target: 1,
+        unit: "tarefa",
+      },
+      attributesFocus: ["consistency"],
     },
     {
-      type: MISSION_TYPES.WEEKLY,
-      description: `Fechar a semana com progresso em: ${objectiveDescription}`,
-      xpReward: 180,
-      penaltyXp: 70,
-      expiresAt: getExpiresAtForType(MISSION_TYPES.WEEKLY, now),
+      title: "Marco semanal",
+      description: `Concluir um marco semanal de: ${objectiveDescription}`,
+      category: "weekly",
+      difficulty: "C",
+      progress: {
+        target: 3,
+        unit: "passos",
+      },
+      attributesFocus: ["focus"],
     },
   ];
 }

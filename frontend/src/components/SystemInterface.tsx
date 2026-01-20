@@ -57,6 +57,9 @@ export const SystemInterface: React.FC<SystemInterfaceProps> = ({ onAwaken, isFi
             <span className="text-red-700">OUTCAST</span> transforma sua vida em um sistema de progressão real. <br />
             <span className="text-zinc-400">Missões. Ranking. Consequências.</span>
           </p>
+          <p className="text-[10px] text-zinc-700 font-mono uppercase tracking-widest mt-4">
+            {isFirstAccess ? "PRIMEIRO ACESSO DETECTADO" : "RETORNO DETECTADO"}
+          </p>
         </div>
       </section>
 

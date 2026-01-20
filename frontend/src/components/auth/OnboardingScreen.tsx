@@ -1,10 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 export function OnboardingScreen({ onComplete }: { onComplete: () => void }) {
-  const router = useRouter();
   const [nome, setNome] = useState("");
   const [idade, setIdade] = useState("");
   const [objetivo, setObjetivo] = useState("");

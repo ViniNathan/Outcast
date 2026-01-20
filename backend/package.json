@@ -32,6 +32,7 @@
   },
   "dependencies": {
     "@backend/env": "workspace:*",
+    "@langchain/google-genai": "^2.1.10",
     "dotenv": "catalog:",
     "supabase": "^2.72.8",
     "zod": "catalog:"

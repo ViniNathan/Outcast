@@ -9,15 +9,31 @@ datasource db {
   provider = "postgresql"
 }
 
-enum MissionType {
+enum MissionCategory {
   DAILY
   WEEKLY
+  MONTHLY
 }
 
 enum MissionStatus {
   PENDING
   COMPLETED
   FAILED
+  EXPIRED
+}
+
+enum MissionDifficulty {
+  E
+  D
+  C
+  B
+  A
+  S
+}
+
+enum MissionSource {
+  AUTOMATIC
+  USER_REQUEST
 }
 
 enum LogType {
@@ -47,6 +63,7 @@ model Player {
   level        Int      @default(1)
   class        String   @default("OUTCAST")
   rank         Int      @default(0)
+  attributes   Json?
   lastActiveAt DateTime @default(now())
   createdAt    DateTime @default(now())
   updatedAt    DateTime @default(now()) @updatedAt
@@ -56,6 +73,7 @@ model Player {
   missions   Mission[]
   logs       SystemLog[]
   rankings   Ranking[]
+  settings   PlayerSettings?
 
   @@index([level, xp, createdAt])
 }
@@ -72,20 +90,41 @@ model Objective {
 }
 
 model Mission {
-  id          String        @id @default(cuid())
-  playerId    String
-  type        MissionType
-  status      MissionStatus @default(PENDING)
-  description String
-  xpReward    Int
-  penaltyXp   Int
-  expiresAt   DateTime
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @default(now()) @updatedAt
+  id                 String            @id @default(cuid())
+  playerId           String
+  category           MissionCategory
+  title              String
+  description        String
+  difficulty         MissionDifficulty
+  status             MissionStatus     @default(PENDING)
+  xpReward           Int
+  xpPenalty          Int
+  attributesRewarded Json?
+  progressCurrent    Int               @default(0)
+  progressTarget     Int
+  progressUnit       String
+  expiresAt          DateTime
+  completedAt        DateTime?
+  source             MissionSource
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @default(now()) @updatedAt
 
   player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
 
   @@index([playerId, status, expiresAt])
+}
+
+model PlayerSettings {
+  id                    String   @id @default(cuid())
+  playerId              String   @unique
+  autoMissionGeneration Boolean  @default(true)
+  isPremium             Boolean  @default(false)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @default(now()) @updatedAt
+
+  player Player @relation(fields: [playerId], references: [id], onDelete: Cascade)
+
+  @@index([playerId, autoMissionGeneration])
 }
 
 model SystemLog {

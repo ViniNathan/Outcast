@@ -16,9 +16,14 @@
     "@elysiajs/cors": "^1.4.1",
     "@elysiajs/trpc": "^1.1.0",
     "@hono/trpc-server": "^0.4.0",
+    "@langchain/classic": "^1.0.9",
+    "@langchain/core": "^1.1.15",
+    "@langchain/google-genai": "^2.1.10",
+    "@langchain/openai": "^1.2.2",
     "@trpc/server": "catalog:",
     "dotenv": "catalog:",
     "elysia": "catalog:",
+    "langchain": "^1.2.10",
     "zod": "catalog:"
   },
   "devDependencies": {

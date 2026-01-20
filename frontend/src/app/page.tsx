@@ -11,7 +11,7 @@ import { useSearchParams } from 'next/navigation';
 const App: React.FC = () => {
   const [systemState, setSystemState] = useState<'INITIALIZING' | 'BOOT' | 'LANDING' | 'ONBOARDING' | 'DASHBOARD'>('INITIALIZING');
   const [hasVisited, setHasVisited] = useState<boolean>(false);
-  const { status, data: session } = useSession();
+  const { status } = useSession();
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -65,9 +65,9 @@ const App: React.FC = () => {
             const data = await meResp.json();
             console.log('[PAGE] Dados do usuário:', data);
             
-            // Se description é "Pendente", precisa completar onboarding
-            if (data?.objective?.description === 'Pendente') {
-              console.log('[PAGE] Objetivo pendente - mostrando onboarding');
+            // Se não há objetivo (ou era um placeholder antigo), precisa completar onboarding
+            if (!data?.objective?.description || data?.objective?.description === 'Pendente') {
+              console.log('[PAGE] Objetivo ausente/pendente - mostrando onboarding');
               setSystemState('ONBOARDING');
             } else {
               console.log('[PAGE] Perfil completo - indo para dashboard');

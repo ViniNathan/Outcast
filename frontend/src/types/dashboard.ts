@@ -1,15 +1,8 @@
 export interface SystemLog {
   id: string;
-  timestamp: string;
+  createdAt: string;
   message: string;
-  type: 'INFO' | 'WARN' | 'ERROR' | 'CRITICAL';
-}
-
-export interface MissionType {
-  rank: string;
-  description: string;
-  reward: string;
-  penalty: string;
+  type: "INFO" | "WARNING" | "SUCCESS" | "FAILURE";
 }
 
 export interface PlayerStat {
@@ -18,18 +11,28 @@ export interface PlayerStat {
   code: string;
 }
 
-export interface Quest {
-  id: number;
+export interface Mission {
+  id: string;
   title: string;
-  current: number;
-  total: number;
-  unit: string;
-  completed: boolean;
+  description: string;
+  category: "DAILY" | "WEEKLY" | "MONTHLY";
+  difficulty: "E" | "D" | "C" | "B" | "A" | "S";
+  status: "PENDING" | "COMPLETED" | "FAILED" | "EXPIRED";
+  xpReward: number;
+  xpPenalty: number;
+  attributesRewarded?: Record<string, number> | null;
+  progressCurrent: number;
+  progressTarget: number;
+  progressUnit: string;
+  createdAt: string;
+  expiresAt: string;
+  completedAt?: string | null;
+  source: "AUTOMATIC" | "USER_REQUEST";
 }
 
 export interface ChatMessage {
   id: string;
-  sender: 'USER' | 'SYSTEM';
+  sender: "USER" | "SYSTEM";
   text: string;
   timestamp: Date;
 }

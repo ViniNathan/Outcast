@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { PlayerStat, Quest, ChatMessage, RankEntry } from '@/types/dashboard';
+import { PlayerStat, Mission, ChatMessage, RankEntry } from '@/types/dashboard';
 import { 
   User, AlertTriangle, Check, Trophy, MessageSquare, 
   Activity, Settings, Send, Lock, Cpu, Share2, Menu, X
@@ -15,18 +15,12 @@ const INITIAL_STATS: PlayerStat[] = [
   { label: 'INTELIG', value: 9, code: 'INT' },
 ];
 
-const INITIAL_QUESTS: Quest[] = [
-  { id: 1, title: 'FLEXÕES', current: 50, total: 100, unit: '', completed: false },
-  { id: 2, title: 'ABDOMINAIS', current: 20, total: 100, unit: '', completed: false },
-  { id: 3, title: 'AGACHAMENTOS', current: 80, total: 100, unit: '', completed: false },
-  { id: 4, title: 'CORRIDA', current: 5, total: 10, unit: 'km', completed: false },
-];
-
 type BackendMeResponse = {
   user: { id: string; authUserId: string; name: string; age: number };
   player: { id: string; xp: number; level: number; class: string; rank: number };
   objective: { id: string; description: string } | null;
   ranking: { position: number } | null;
+  settings?: { autoMissionGeneration: boolean; isPremium: boolean } | null;
 };
 
 type BackendRankingResponse = {
@@ -38,6 +32,10 @@ type BackendRankingResponse = {
     xp: number;
     class: string;
   }>;
+};
+
+type BackendMissionsResponse = {
+  missions: Mission[];
 };
 
 function rankLetterForLevel(level: number) {
@@ -54,7 +52,7 @@ function rankLetterForLevel(level: number) {
 export const Dashboard: React.FC = () => {
   const { status, data: session } = useSession();
   const [activeTab, setActiveTab] = useState<'STATUS' | 'RANKING' | 'ORACLE' | 'PROFILE'>('STATUS');
-  const [quests, setQuests] = useState<Quest[]>(INITIAL_QUESTS);
+  const [missions, setMissions] = useState<Mission[]>([]);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   // Profile State
@@ -64,6 +62,8 @@ export const Dashboard: React.FC = () => {
   const [playerClass, setPlayerClass] = useState<string>('NENHUMA');
   const [playerRankLetter, setPlayerRankLetter] = useState<string>('E');
   const [playerRankingPosition, setPlayerRankingPosition] = useState<number | null>(null);
+  const [playerId, setPlayerId] = useState<string | null>(null);
+  const [autoMissionGeneration, setAutoMissionGeneration] = useState<boolean>(true);
   const [ranking, setRanking] = useState<RankEntry[]>([]);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -74,6 +74,7 @@ export const Dashboard: React.FC = () => {
     { id: '1', sender: 'SYSTEM', text: 'O Oráculo está online. Solicite uma diretriz de missão ou análise de combate.', timestamp: new Date() }
   ]);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const autoGenRef = useRef<{ attempted: boolean }>({ attempted: false });
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -100,6 +101,8 @@ export const Dashboard: React.FC = () => {
         setPlayerClass(me.player.class);
         setPlayerRankLetter(rankLetterForLevel(me.player.level));
         setPlayerRankingPosition(me.ranking?.position ?? null);
+        setPlayerId(me.player.id);
+        setAutoMissionGeneration(me.settings?.autoMissionGeneration ?? true);
 
         const rankResp = await fetch('/api/dashboard/ranking?limit=50', { cache: 'no-store' });
         if (!rankResp.ok) {
@@ -118,6 +121,13 @@ export const Dashboard: React.FC = () => {
             isUser: r.playerId === myPlayerId,
           })),
         );
+
+        // Missões (sempre do backend)
+        const missionsResp = await fetch('/api/missions?limit=100', { cache: 'no-store' });
+        if (missionsResp.ok) {
+          const m = (await missionsResp.json()) as BackendMissionsResponse;
+          if (!cancelled) setMissions(m.missions ?? []);
+        }
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         if (!cancelled) setLoadError(msg);
@@ -129,6 +139,30 @@ export const Dashboard: React.FC = () => {
       cancelled = true;
     };
   }, [status]);
+
+  // Trigger de auto-generate ao entrar em STATUS (backend decide se cria ou não)
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+    if (activeTab !== 'STATUS') return;
+    if (autoGenRef.current.attempted) return;
+    autoGenRef.current.attempted = true;
+
+    const run = async () => {
+      try {
+        if (!autoMissionGeneration) return;
+        await fetch('/api/missions/auto-generate', { method: 'POST' });
+        const missionsResp = await fetch('/api/missions?limit=100', { cache: 'no-store' });
+        if (missionsResp.ok) {
+          const m = (await missionsResp.json()) as BackendMissionsResponse;
+          setMissions(m.missions ?? []);
+        }
+      } catch {
+        // silencioso (MVP)
+      }
+    };
+
+    void run();
+  }, [status, activeTab, autoMissionGeneration]);
 
   useEffect(() => {
     if (!isMobileMenuOpen) return;
@@ -152,18 +186,35 @@ export const Dashboard: React.FC = () => {
   }, [isMobileMenuOpen]);
 
   // Handlers
-  const toggleQuest = (id: number) => {
-    setQuests(prev => prev.map(q => {
-      if (q.id === id) {
-        const isNowComplete = !q.completed;
-        return {
-          ...q,
-          completed: isNowComplete,
-          current: isNowComplete ? q.total : Math.floor(q.total / 2)
-        };
+  const completeMission = async (mission: Mission) => {
+    if (mission.status !== 'PENDING') return;
+    try {
+      const resp = await fetch('/api/missions/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ missionId: mission.id }),
+      });
+      if (!resp.ok) return;
+
+      // Atualiza lista de missões
+      const missionsResp = await fetch('/api/missions?limit=100', { cache: 'no-store' });
+      if (missionsResp.ok) {
+        const m = (await missionsResp.json()) as BackendMissionsResponse;
+        setMissions(m.missions ?? []);
       }
-      return q;
-    }));
+
+      // Atualiza "me" para refletir XP/level
+      const meResp = await fetch('/api/dashboard/me', { cache: 'no-store' });
+      if (meResp.ok) {
+        const me = (await meResp.json()) as BackendMeResponse;
+        setPlayerLevel(me.player.level);
+        setPlayerClass(me.player.class);
+        setPlayerRankLetter(rankLetterForLevel(me.player.level));
+        setPlayerRankingPosition(me.ranking?.position ?? null);
+      }
+    } catch {
+      // silencioso (MVP)
+    }
   };
 
   const handleSelectTab = (tab: 'STATUS' | 'RANKING' | 'ORACLE' | 'PROFILE') => {
@@ -176,32 +227,99 @@ export const Dashboard: React.FC = () => {
 
     const userMsg: ChatMessage = { id: Date.now().toString(), sender: 'USER', text: chatInput, timestamp: new Date() };
     setMessages(prev => [...prev, userMsg]);
+    const messageToSend = chatInput;
     setChatInput('');
 
-    // Simulate AI Latency
-    setTimeout(() => {
-      const responses = [
-        "CALCULANDO VIABILIDADE...",
-        "SEU NÍVEL ATUAL É INSUFICIENTE PARA ESSA QUESTÃO.",
-        "NOVA MISSÃO GERADA: SOBREVIVA.",
-        "ANÁLISE CONCLUÍDA: VOCÊ PRECISA DE MAIS FORÇA.",
-        "O SISTEMA RECONHECE SUA AMBIÇÃO. MAS NÃO SUA CAPACIDADE."
-      ];
-      const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-      
-      const sysMsg: ChatMessage = { 
-        id: (Date.now() + 1).toString(), 
-        sender: 'SYSTEM', 
-        text: randomResponse, 
-        timestamp: new Date() 
+    try {
+      const resp = await fetch('/api/missions/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: messageToSend }),
+      });
+
+      const text = await resp.text();
+      if (!resp.ok) {
+        let detail = 'REQUISIÇÃO RECUSADA.';
+        try {
+          const parsed = JSON.parse(text) as { error?: string; details?: unknown };
+          if (typeof parsed?.error === 'string' && parsed.error) detail = parsed.error;
+          else if (typeof parsed?.details === 'string' && parsed.details) detail = parsed.details;
+        } catch {
+          // ignore
+        }
+        const sysMsg: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          sender: 'SYSTEM',
+          text: detail,
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, sysMsg]);
+        return;
+      }
+
+      let missionTitle = 'MISSÃO GERADA';
+      try {
+        const data = JSON.parse(text) as { mission?: Mission; skipped?: boolean; reason?: string };
+        if (data?.mission?.title) missionTitle = data.mission.title;
+      } catch {
+        // ignore
+      }
+
+      const sysMsg: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        sender: 'SYSTEM',
+        text: `NOVA MISSÃO GERADA: ${missionTitle}`,
+        timestamp: new Date(),
       };
       setMessages(prev => [...prev, sysMsg]);
-    }, 1500);
+
+      const missionsResp = await fetch('/api/missions?limit=100', { cache: 'no-store' });
+      if (missionsResp.ok) {
+        const m = (await missionsResp.json()) as BackendMissionsResponse;
+        setMissions(m.missions ?? []);
+      }
+    } catch {
+      const sysMsg: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        sender: 'SYSTEM',
+        text: 'FALHA DE COMUNICAÇÃO.',
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, sysMsg]);
+    }
+  };
+
+  const handleToggleAutoMissions = async () => {
+    try {
+      const next = !autoMissionGeneration;
+      const resp = await fetch('/api/player/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ autoMissionGeneration: next }),
+      });
+      const text = await resp.text();
+      if (!resp.ok) {
+        let detail = 'FALHA AO ATUALIZAR CONFIGURAÇÃO.';
+        try {
+          const parsed = JSON.parse(text) as { error?: string; details?: unknown };
+          if (typeof parsed?.error === 'string' && parsed.error) detail = parsed.error;
+          else if (typeof parsed?.details === 'string' && parsed.details) detail = parsed.details;
+        } catch {
+          // ignore
+        }
+        setMessages(prev => [...prev, { id: Date.now().toString(), sender: 'SYSTEM', text: detail, timestamp: new Date() }]);
+        return;
+      }
+      setAutoMissionGeneration(next);
+    } catch {
+      setMessages(prev => [...prev, { id: Date.now().toString(), sender: 'SYSTEM', text: 'FALHA DE COMUNICAÇÃO.', timestamp: new Date() }]);
+    }
   };
 
   // --- SUB-VIEWS ---
 
   const renderStatus = () => {
+    const pendingCount = missions.filter((m) => m.status === 'PENDING').length;
     const missionLog = (
       <div className="border border-zinc-800 relative overflow-hidden bg-black">
         <div className="bg-zinc-900/50 p-3 sm:p-4 border-b border-zinc-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
@@ -209,44 +327,75 @@ export const Dashboard: React.FC = () => {
               <AlertTriangle size={16} /> LOG DE MISSÕES
             </span>
             <span className="text-[10px] text-zinc-500 font-mono bg-zinc-900 px-2 py-1 border border-zinc-800">
-              DIFICULDADE: E
+              PLAYER: {playerId ? playerId.slice(0, 6) : '---'}
             </span>
         </div>
 
         <div className="p-4 sm:p-6">
-          <h3 className="text-xl sm:text-2xl text-zinc-100 mb-2 uppercase tracking-tight font-bold">Missão Diária: Preparação</h3>
+          <h3 className="text-xl sm:text-2xl text-zinc-100 mb-2 uppercase tracking-tight font-bold">Missões ativas</h3>
           <p className="text-zinc-500 text-xs font-mono mb-6 sm:mb-8 border-b border-zinc-900 pb-4 leading-relaxed">
-            Complete o treinamento físico para fortalecer seu receptáculo.
-            <span className="text-red-900/80">O fracasso resultará em punição severa na Zona de Penalidade.</span>
+            O sistema emite tarefas mensuráveis. Conclua e receba XP. Falhe e aceite a penalidade.
           </p>
 
+          {pendingCount === 0 ? (
+            <div className="mb-6 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between border border-zinc-900 bg-zinc-950/30 p-4">
+              <div className="text-xs font-mono text-zinc-500 uppercase tracking-widest">
+                Geração automática
+                <span className={autoMissionGeneration ? "text-green-700 ml-2" : "text-red-700 ml-2"}>
+                  {autoMissionGeneration ? "ON" : "OFF"}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => void handleToggleAutoMissions()}
+                className="px-4 py-2 border border-zinc-800 bg-black text-zinc-400 hover:text-red-500 hover:border-red-900 transition-colors text-xs font-mono uppercase tracking-widest"
+              >
+                Alternar
+              </button>
+            </div>
+          ) : null}
+
           <div className="space-y-6">
-            {quests.map((quest) => {
-              const percent = (quest.current / quest.total) * 100;
+            {missions.map((mission) => {
+              const percent = mission.progressTarget > 0 ? (mission.progressCurrent / mission.progressTarget) * 100 : 0;
+              const isCompleted = mission.status === 'COMPLETED';
+              const isPending = mission.status === 'PENDING';
+              const isFailed = mission.status === 'FAILED' || mission.status === 'EXPIRED';
               return (
                 <div 
-                  key={quest.id} 
-                  onClick={() => toggleQuest(quest.id)}
-                  className={`group cursor-pointer select-none transition-all duration-300 ${quest.completed ? 'opacity-50 grayscale' : 'opacity-100'}`}
+                  key={mission.id} 
+                  onClick={() => (isPending ? void completeMission(mission) : undefined)}
+                  className={`group select-none transition-all duration-300 ${
+                    isPending ? 'cursor-pointer' : 'cursor-default'
+                  } ${isCompleted ? 'opacity-50 grayscale' : isFailed ? 'opacity-70' : 'opacity-100'}`}
                 >
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-2">
                     <span className="text-sm text-zinc-300 font-bold tracking-wider flex items-center gap-3 group-hover:text-red-500 transition-colors break-words">
                       <div className={`w-5 h-5 border flex items-center justify-center transition-colors ${
-                        quest.completed ? 'bg-zinc-800 border-zinc-600' : 'border-zinc-700 bg-black group-hover:border-red-600'
+                        isCompleted ? 'bg-zinc-800 border-zinc-600' : 'border-zinc-700 bg-black group-hover:border-red-600'
                       }`}>
-                        {quest.completed && <Check size={12} className="text-zinc-400" />}
+                        {isCompleted && <Check size={12} className="text-zinc-400" />}
                       </div>
-                      <span className="flex-1 min-w-0 break-words">{quest.title}</span>
+                      <span className="flex-1 min-w-0 break-words">
+                        {mission.title}
+                        <span className="ml-3 text-[10px] font-mono text-zinc-600 uppercase">
+                          [{mission.category}] [{mission.difficulty}] [{mission.status}]
+                        </span>
+                      </span>
                     </span>
                     <span className="text-xs font-mono text-zinc-500 shrink-0">
-                      {quest.current}/{quest.total} {quest.unit}
+                      {mission.progressCurrent}/{mission.progressTarget} {mission.progressUnit}
                     </span>
                   </div>
                   <div className="h-4 w-full bg-zinc-950 border border-zinc-900 relative overflow-hidden">
                     <div 
-                      className={`h-full transition-all duration-500 ease-out ${quest.completed ? 'bg-zinc-600' : 'bg-red-900'}`}
+                      className={`h-full transition-all duration-500 ease-out ${isCompleted ? 'bg-zinc-600' : 'bg-red-900'}`}
                       style={{ width: `${percent}%` }}
                     />
+                  </div>
+                  <div className="mt-2 flex justify-between text-[10px] font-mono text-zinc-600">
+                    <span>XP: +{mission.xpReward}</span>
+                    <span>PENALIDADE: -{mission.xpPenalty}</span>
                   </div>
                 </div>
               );
@@ -255,7 +404,7 @@ export const Dashboard: React.FC = () => {
         </div>
         <div className="bg-red-950/5 border-t border-red-900/20 p-4 text-center">
           <span className="text-xs text-red-800 font-mono uppercase animate-pulse font-bold tracking-widest">
-            Tempo Restante: 14:02:59
+            Missões pendentes: {pendingCount}
           </span>
         </div>
       </div>
@@ -283,6 +432,19 @@ export const Dashboard: React.FC = () => {
             <div className="space-y-1">
               <span className="text-[10px] text-zinc-600 font-mono block">CLASSE</span>
               <span className="text-xl text-zinc-500 font-mono">{playerClass}</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 relative z-10">
+            <div className="space-y-1">
+              <span className="text-[10px] text-zinc-600 font-mono block">POSIÇÃO</span>
+              <span className="text-xl text-zinc-300 font-mono">{playerRankingPosition ?? '--'}</span>
+            </div>
+            <div className="space-y-1">
+              <span className="text-[10px] text-zinc-600 font-mono block">MISSÕES</span>
+              <span className="text-xl text-zinc-500 font-mono">
+                {missions.filter((m) => m.status === 'PENDING').length}
+              </span>
             </div>
           </div>
 
