@@ -563,7 +563,7 @@ export const Dashboard: React.FC = () => {
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-mono text-zinc-500 uppercase">Título Atual</label>
+            <label className="text-xs font-mono text-zinc-500 uppercase">Objetivo Atual</label>
             <input 
               type="text" 
               value={playerTitle}
