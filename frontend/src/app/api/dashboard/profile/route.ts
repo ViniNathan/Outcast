@@ -45,8 +45,15 @@ export async function POST(req: Request) {
 
   const text = await resp.text();
   if (!resp.ok) {
+    let errorMessage = "Falha ao atualizar usuário.";
+    try {
+      const parsed = JSON.parse(text) as { error?: string };
+      if (parsed?.error) errorMessage = parsed.error;
+    } catch {
+      // ignore
+    }
     return NextResponse.json(
-      { error: "Backend recusou.", details: text },
+      { error: errorMessage, details: text },
       { status: 502 },
     );
   }

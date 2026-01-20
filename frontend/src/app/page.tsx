@@ -14,51 +14,34 @@ const App: React.FC = () => {
   const { status } = useSession();
   const searchParams = useSearchParams();
 
+  // Efeito principal que determina o estado inicial baseado em:
+  // 1. Se veio do callback do Google (?next=dashboard)
+  // 2. Se já visitou antes (localStorage)
   useEffect(() => {
-    // Verifica se o usuário já acessou o sistema anteriormente
-    let visited = null;
-    try {
-      visited = window.localStorage.getItem('outcast_already_accessed');
-    } catch (e) {
-      console.error('Erro ao ler localStorage:', e);
-    }
-    
-    // Deferimos a atualização para evitar o erro de cascading render
-    // e garantir que o estado inicial 'INITIALIZING' seja processado corretamente
-    const timeout = setTimeout(() => {
-      const isReturning = visited === 'true';
-      setHasVisited(isReturning);
-      // Em acessos futuros, pulamos o BOOT mas mantemos a landing.
-      setSystemState(isReturning ? 'LANDING' : 'BOOT');
-    }, 0);
+    // Aguarda o NextAuth resolver o status da sessão
+    if (status === 'loading') return;
 
-    return () => clearTimeout(timeout);
-  }, []);
-
-  // Se o usuário acabou de voltar do NextAuth com intenção explícita de entrar no dashboard,
-  // verificamos se o User existe no backend.
-  useEffect(() => {
     const next = searchParams.get('next');
-    if (next !== 'dashboard') return;
-    if (status !== 'authenticated') return;
+    const isFromGoogleCallback = next === 'dashboard';
+    const isAuthenticated = status === 'authenticated';
 
-    // Deferimos para evitar o lint `react-hooks/set-state-in-effect`
-    const timeout = setTimeout(() => {
-      // Marca como já acessou (pula BOOT nas próximas visitas)
+    // Se veio do callback do Google e está autenticado, vai direto para verificar backend
+    if (isFromGoogleCallback && isAuthenticated) {
+      // Marca como já acessou
       try {
         window.localStorage.setItem('outcast_already_accessed', 'true');
       } catch (e) {
         console.error('Erro ao salvar no localStorage:', e);
       }
 
-      // Verifica se o User existe e se precisa completar o onboarding
+      // Verifica se o User existe no backend
       void (async () => {
         try {
           const meResp = await fetch('/api/dashboard/me', { cache: 'no-store' });
           
           if (!meResp.ok) {
-            // User não existe no backend (erro inesperado) - mostrar onboarding
-            console.error('[PAGE] Usuário não encontrado no backend');
+            // User não existe no backend ainda - mostrar onboarding para criar o perfil
+            console.log('[PAGE] Usuário ainda não cadastrado no backend - mostrando onboarding');
             setSystemState('ONBOARDING');
           } else {
             // User existe - verificar se precisa completar onboarding
@@ -80,10 +63,22 @@ const App: React.FC = () => {
           setSystemState('ONBOARDING');
         }
       })();
-    }, 0);
+      return;
+    }
 
-    return () => clearTimeout(timeout);
-  }, [searchParams, status]);
+    // Fluxo normal: verifica localStorage para decidir entre BOOT e LANDING
+    let visited = null;
+    try {
+      visited = window.localStorage.getItem('outcast_already_accessed');
+    } catch (e) {
+      console.error('Erro ao ler localStorage:', e);
+    }
+    
+    const isReturning = visited === 'true';
+    setHasVisited(isReturning);
+    // Em acessos futuros, pulamos o BOOT mas mantemos a landing.
+    setSystemState(isReturning ? 'LANDING' : 'BOOT');
+  }, [status, searchParams]);
 
   const handleBootComplete = () => {
     setSystemState('LANDING');
@@ -101,9 +96,14 @@ const App: React.FC = () => {
   };
 
   const handleOnboardingComplete = () => {
-    // Após completar onboarding, marcar como primeiro acesso para mostrar tutorial
-    setHasVisited(false);
-    setSystemState('LANDING');
+    // Após completar onboarding, ir direto para o dashboard
+    try {
+      window.localStorage.setItem('outcast_already_accessed', 'true');
+    } catch (error) {
+      console.error('Erro ao salvar no localStorage:', error);
+    }
+    setHasVisited(true);
+    setSystemState('DASHBOARD');
   };
 
   // Evita flash do conteúdo inicial enquanto verifica o localStorage

@@ -100,6 +100,8 @@ model Mission {
   xpReward           Int
   xpPenalty          Int
   attributesRewarded Json?
+  statRewardCode     String?
+  statRewardValue    Int?
   progressCurrent    Int               @default(0)
   progressTarget     Int
   progressUnit       String

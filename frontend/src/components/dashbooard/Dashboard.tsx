@@ -7,12 +7,12 @@ import {
 import { signOut, useSession } from 'next-auth/react';
 
 // --- DATA CONSTANTS ---
-const INITIAL_STATS: PlayerStat[] = [
-  { label: 'FORÇA', value: 12, code: 'FOR' },
-  { label: 'AGILIDADE', value: 14, code: 'AGI' },
-  { label: 'SENTIDOS', value: 11, code: 'SEN' },
+const DEFAULT_STATS: PlayerStat[] = [
+  { label: 'FORÇA', value: 10, code: 'FOR' },
+  { label: 'AGILIDADE', value: 10, code: 'AGI' },
+  { label: 'SENTIDOS', value: 10, code: 'SEN' },
   { label: 'VITALIDADE', value: 10, code: 'VIT' },
-  { label: 'INTELIG', value: 9, code: 'INT' },
+  { label: 'INTELIG', value: 10, code: 'INT' },
 ];
 
 type BackendMeResponse = {
@@ -70,6 +70,8 @@ export const Dashboard: React.FC = () => {
   const [ranking, setRanking] = useState<RankEntry[]>([]);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [playerStats, setPlayerStats] = useState<PlayerStat[]>(DEFAULT_STATS);
+  const [selectedMission, setSelectedMission] = useState<Mission | null>(null);
 
   // Chat State
   const [chatInput, setChatInput] = useState('');
@@ -77,7 +79,6 @@ export const Dashboard: React.FC = () => {
     { id: '1', sender: 'SYSTEM', text: 'O Oráculo está online. Solicite uma diretriz de missão ou análise de combate.', timestamp: new Date() }
   ]);
   const chatEndRef = useRef<HTMLDivElement>(null);
-  const autoGenRef = useRef<{ attempted: boolean }>({ attempted: false });
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -106,6 +107,20 @@ export const Dashboard: React.FC = () => {
         setPlayerRankingPosition(me.ranking?.position ?? null);
         setPlayerId(me.player.id);
         setAutoMissionGeneration(me.settings?.autoMissionGeneration ?? true);
+
+        // Processar stats do backend
+        const backendAttributes = me.player.attributes as Record<string, number> | null;
+        if (backendAttributes) {
+          setPlayerStats([
+            { label: 'FORÇA', value: backendAttributes.FOR || 10, code: 'FOR' },
+            { label: 'AGILIDADE', value: backendAttributes.AGI || 10, code: 'AGI' },
+            { label: 'SENTIDOS', value: backendAttributes.SEN || 10, code: 'SEN' },
+            { label: 'VITALIDADE', value: backendAttributes.VIT || 10, code: 'VIT' },
+            { label: 'INTELIG', value: backendAttributes.INT || 10, code: 'INT' },
+          ]);
+        } else {
+          setPlayerStats(DEFAULT_STATS);
+        }
 
         const rankResp = await fetch('/api/dashboard/ranking?limit=50', { cache: 'no-store' });
         if (!rankResp.ok) {
@@ -145,29 +160,44 @@ export const Dashboard: React.FC = () => {
     };
   }, [status]);
 
-  // Trigger de auto-generate ao entrar em STATUS (backend decide se cria ou não)
-  useEffect(() => {
-    if (status !== 'authenticated') return;
-    if (activeTab !== 'STATUS') return;
-    if (autoGenRef.current.attempted) return;
-    autoGenRef.current.attempted = true;
-
-    const run = async () => {
+  // Função para verificar e gerar missões automaticamente
+  const checkAndGenerateMissions = async () => {
+    if (status !== 'authenticated' || !autoMissionGeneration) return;
+    
+    const pendingCount = missions.filter((m) => m.status === 'PENDING').length;
+    
+    // Se não houver missões pendentes, tentar gerar
+    if (pendingCount === 0) {
       try {
-        if (!autoMissionGeneration) return;
-        await fetch('/api/missions/auto-generate', { method: 'POST' });
-        const missionsResp = await fetch('/api/missions?limit=100', { cache: 'no-store' });
-        if (missionsResp.ok) {
-          const m = (await missionsResp.json()) as BackendMissionsResponse;
-          setMissions(m.missions ?? []);
+        const resp = await fetch('/api/missions/auto-generate', { method: 'POST' });
+        if (resp.ok) {
+          // Recarregar missões
+          const missionsResp = await fetch('/api/missions?limit=100', { cache: 'no-store' });
+          if (missionsResp.ok) {
+            const m = (await missionsResp.json()) as BackendMissionsResponse;
+            setMissions(m.missions ?? []);
+          }
         }
-      } catch {
-        // silencioso (MVP)
+      } catch (error) {
+        console.error('Erro ao gerar missões automaticamente:', error);
       }
-    };
+    }
+  };
 
-    void run();
-  }, [status, activeTab, autoMissionGeneration]);
+  // Verifica se precisa gerar missões quando as missões mudam
+  useEffect(() => {
+    if (status !== 'authenticated' || !autoMissionGeneration) return;
+    
+    const pendingCount = missions.filter((m) => m.status === 'PENDING').length;
+    if (pendingCount === 0 && missions.length > 0) {
+      // Se não há missões pendentes mas há missões (significa que todas foram completadas/falharam)
+      const timer = setTimeout(() => {
+        void checkAndGenerateMissions();
+      }, 1000); // Delay de 1s para evitar múltiplas chamadas
+      
+      return () => clearTimeout(timer);
+    }
+  }, [missions, status, autoMissionGeneration]);
 
   useEffect(() => {
     if (!isMobileMenuOpen) return;
@@ -193,32 +223,64 @@ export const Dashboard: React.FC = () => {
   // Handlers
   const completeMission = async (mission: Mission) => {
     if (mission.status !== 'PENDING') return;
+    
+    // Optimistic update - atualiza UI imediatamente
+    setMissions(prev => prev.map(m => 
+      m.id === mission.id ? { ...m, status: 'COMPLETED' as const, completedAt: new Date().toISOString() } : m
+    ));
+    
     try {
       const resp = await fetch('/api/missions/complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ missionId: mission.id }),
       });
-      if (!resp.ok) return;
+      
+      if (!resp.ok) {
+        // Reverter em caso de erro
+        setMissions(prev => prev.map(m => 
+          m.id === mission.id ? { ...m, status: 'PENDING' as const, completedAt: null } : m
+        ));
+        console.error('Erro ao completar missão');
+        return;
+      }
 
-      // Atualiza lista de missões
-      const missionsResp = await fetch('/api/missions?limit=100', { cache: 'no-store' });
+      // Atualiza dados completos do servidor em background
+      const [missionsResp, meResp] = await Promise.all([
+        fetch('/api/missions?limit=100', { cache: 'no-store' }),
+        fetch('/api/dashboard/me', { cache: 'no-store' })
+      ]);
+
       if (missionsResp.ok) {
         const m = (await missionsResp.json()) as BackendMissionsResponse;
         setMissions(m.missions ?? []);
       }
 
-      // Atualiza "me" para refletir XP/level
-      const meResp = await fetch('/api/dashboard/me', { cache: 'no-store' });
       if (meResp.ok) {
         const me = (await meResp.json()) as BackendMeResponse;
         setPlayerLevel(me.player.level);
         setPlayerClass(me.player.class);
         setPlayerRankLetter(rankLetterForLevel(me.player.level));
         setPlayerRankingPosition(me.ranking?.position ?? null);
+        
+        // Atualizar stats
+        const backendAttributes = me.player.attributes as Record<string, number> | null;
+        if (backendAttributes) {
+          setPlayerStats([
+            { label: 'FORÇA', value: backendAttributes.FOR || 10, code: 'FOR' },
+            { label: 'AGILIDADE', value: backendAttributes.AGI || 10, code: 'AGI' },
+            { label: 'SENTIDOS', value: backendAttributes.SEN || 10, code: 'SEN' },
+            { label: 'VITALIDADE', value: backendAttributes.VIT || 10, code: 'VIT' },
+            { label: 'INTELIG', value: backendAttributes.INT || 10, code: 'INT' },
+          ]);
+        }
       }
-    } catch {
-      // silencioso (MVP)
+    } catch (error) {
+      // Reverter em caso de erro
+      setMissions(prev => prev.map(m => 
+        m.id === mission.id ? { ...m, status: 'PENDING' as const, completedAt: null } : m
+      ));
+      console.error('Erro ao completar missão:', error);
     }
   };
 
@@ -262,10 +324,16 @@ export const Dashboard: React.FC = () => {
         return;
       }
 
-      let missionTitle = 'MISSÃO GERADA';
+      let responseMessage = 'MISSÕES GERADAS';
+      let missionsCount = 0;
       try {
-        const data = JSON.parse(text) as { mission?: Mission; skipped?: boolean; reason?: string };
-        if (data?.mission?.title) missionTitle = data.mission.title;
+        const data = JSON.parse(text) as { missions?: Mission[]; message?: string; skipped?: boolean; reason?: string };
+        if (data?.missions && data.missions.length > 0) {
+          missionsCount = data.missions.length;
+          responseMessage = data.message || `${missionsCount} nova(s) missão(ões) criada(s)`;
+        } else if (data?.skipped) {
+          responseMessage = `Geração ignorada: ${data.reason || 'motivo desconhecido'}`;
+        }
       } catch {
         // ignore
       }
@@ -273,7 +341,7 @@ export const Dashboard: React.FC = () => {
       const sysMsg: ChatMessage = {
         id: (Date.now() + 1).toString(),
         sender: 'SYSTEM',
-        text: `NOVA MISSÃO GERADA: ${missionTitle}`,
+        text: responseMessage,
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, sysMsg]);
@@ -329,6 +397,161 @@ export const Dashboard: React.FC = () => {
     }
   };
 
+  // --- COMPONENTS ---
+  
+  const MissionDetailModal = ({ mission }: { mission: Mission }) => {
+    const expiresDate = new Date(mission.expiresAt);
+    const now = new Date();
+    const timeLeft = expiresDate.getTime() - now.getTime();
+    const daysLeft = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+    const hoursLeft = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    
+    const isPending = mission.status === 'PENDING';
+    
+    return (
+      <div 
+        className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
+        onClick={() => setSelectedMission(null)}
+      >
+        <div 
+          className="bg-black border-2 border-zinc-800 max-w-2xl w-full max-h-[90vh] overflow-y-auto custom-scrollbar"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Header */}
+          <div className="bg-red-950/20 border-b-2 border-red-900/30 p-6 relative">
+            <button
+              onClick={() => setSelectedMission(null)}
+              className="absolute top-4 right-4 p-2 border border-zinc-800 bg-black text-zinc-400 hover:text-red-500 hover:border-red-900 transition-colors"
+            >
+              <X size={20} />
+            </button>
+            
+            <div className="flex items-start gap-4 mb-4">
+              <div className="flex-1">
+                <h2 className="text-2xl font-bold text-zinc-100 uppercase tracking-tight mb-2">
+                  {mission.title}
+                </h2>
+                <div className="flex gap-3 text-xs font-mono">
+                  <span className={`px-2 py-1 border ${
+                    mission.category === 'DAILY' ? 'border-blue-800 text-blue-500' :
+                    mission.category === 'WEEKLY' ? 'border-yellow-800 text-yellow-500' :
+                    'border-red-800 text-red-500'
+                  }`}>
+                    {mission.category}
+                  </span>
+                  <span className="px-2 py-1 border border-zinc-800 text-zinc-500">
+                    RANK {mission.difficulty}
+                  </span>
+                  <span className={`px-2 py-1 border ${
+                    isPending ? 'border-green-900 text-green-500' : 'border-zinc-800 text-zinc-600'
+                  }`}>
+                    {mission.status}
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            {/* Prazo */}
+            {isPending && (
+              <div className="bg-zinc-950/50 border border-zinc-900 p-3 mt-4">
+                <div className="text-xs font-mono text-zinc-600 uppercase mb-1">Prazo</div>
+                <div className="text-sm font-mono text-zinc-300">
+                  {timeLeft > 0 ? (
+                    <>
+                      {daysLeft > 0 && <span>{daysLeft}d </span>}
+                      {hoursLeft}h restantes
+                    </>
+                  ) : (
+                    <span className="text-red-500">EXPIRADO</span>
+                  )}
+                </div>
+                <div className="text-xs text-zinc-600 mt-1">
+                  {expiresDate.toLocaleDateString('pt-BR', { 
+                    day: '2-digit', 
+                    month: 'short', 
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Body */}
+          <div className="p-6 space-y-6">
+            {/* Descrição */}
+            <div>
+              <div className="text-xs font-mono text-zinc-600 uppercase mb-2">Objetivo Detalhado</div>
+              <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap">
+                {mission.description}
+              </p>
+            </div>
+
+            {/* Progresso */}
+            <div>
+              <div className="text-xs font-mono text-zinc-600 uppercase mb-2">Progresso</div>
+              <div className="bg-zinc-950/50 border border-zinc-900 p-4">
+                <div className="flex justify-between text-sm font-mono text-zinc-400 mb-2">
+                  <span>Meta: {mission.progressTarget} {mission.progressUnit}</span>
+                  <span>Atual: {mission.progressCurrent} {mission.progressUnit}</span>
+                </div>
+                <div className="h-3 w-full bg-zinc-950 border border-zinc-900 relative overflow-hidden">
+                  <div 
+                    className="h-full bg-red-900 transition-all"
+                    style={{ 
+                      width: `${mission.progressTarget > 0 ? (mission.progressCurrent / mission.progressTarget) * 100 : 0}%` 
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Recompensas */}
+            <div>
+              <div className="text-xs font-mono text-zinc-600 uppercase mb-2">Recompensas</div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-green-950/20 border border-green-900/30 p-4">
+                  <div className="text-xs text-green-700 font-mono mb-1">XP GANHO</div>
+                  <div className="text-2xl font-bold text-green-500">+{mission.xpReward}</div>
+                </div>
+                <div className="bg-red-950/20 border border-red-900/30 p-4">
+                  <div className="text-xs text-red-700 font-mono mb-1">XP PENALIDADE</div>
+                  <div className="text-2xl font-bold text-red-500">-{mission.xpPenalty}</div>
+                </div>
+              </div>
+              
+              {/* Stats Reward */}
+              {mission.statRewardCode && mission.statRewardValue && (
+                <div className="mt-3 bg-purple-950/20 border border-purple-900/30 p-4">
+                  <div className="text-xs text-purple-700 font-mono mb-2">ATRIBUTO BÔNUS</div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-lg font-bold text-purple-400">{mission.statRewardCode}</span>
+                    <span className="text-2xl font-bold text-purple-300">+{mission.statRewardValue}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Botão de completar */}
+            {isPending && (
+              <button
+                onClick={() => {
+                  void completeMission(mission);
+                  setSelectedMission(null);
+                }}
+                className="w-full py-4 bg-red-950/30 border-2 border-red-900 text-red-500 hover:bg-red-900 hover:text-white transition-all font-bold tracking-widest uppercase text-sm flex items-center justify-center gap-2"
+              >
+                <Check size={20} />
+                Concluir Missão
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // --- SUB-VIEWS ---
 
   const renderStatus = () => {
@@ -375,16 +598,22 @@ export const Dashboard: React.FC = () => {
               return (
                 <div 
                   key={mission.id} 
-                  onClick={() => (isPending ? void completeMission(mission) : undefined)}
-                  className={`group select-none transition-all duration-300 ${
-                    isPending ? 'cursor-pointer' : 'cursor-default'
-                  } ${isCompleted ? 'opacity-50 grayscale' : isFailed ? 'opacity-70' : 'opacity-100'}`}
+                  onClick={() => setSelectedMission(mission)}
+                  className={`group select-none transition-all duration-300 cursor-pointer ${
+                    isCompleted ? 'opacity-50 grayscale' : isFailed ? 'opacity-70' : 'opacity-100'
+                  }`}
                 >
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-2 mb-2">
                     <span className="text-sm text-zinc-300 font-bold tracking-wider flex items-center gap-3 group-hover:text-red-500 transition-colors break-words">
-                      <div className={`w-5 h-5 border flex items-center justify-center transition-colors ${
-                        isCompleted ? 'bg-zinc-800 border-zinc-600' : 'border-zinc-700 bg-black group-hover:border-red-600'
-                      }`}>
+                      <div 
+                        className={`w-5 h-5 border flex items-center justify-center transition-colors shrink-0 ${
+                          isCompleted ? 'bg-zinc-800 border-zinc-600' : 'border-zinc-700 bg-black group-hover:border-red-600'
+                        }`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (isPending) void completeMission(mission);
+                        }}
+                      >
                         {isCompleted && <Check size={12} className="text-zinc-400" />}
                       </div>
                       <span className="flex-1 min-w-0 break-words">
@@ -469,7 +698,7 @@ export const Dashboard: React.FC = () => {
     const statsPanel = (
       <div className="space-y-2">
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-          {INITIAL_STATS.map((stat) => (
+          {playerStats.map((stat) => (
             <div key={stat.code} className="border border-zinc-900 p-3 sm:p-4 hover:border-red-900/30 transition-colors group bg-zinc-950/30 flex flex-col items-center justify-center text-center">
               <div className="text-[10px] text-zinc-600 font-mono mb-2 group-hover:text-red-800 transition-colors">
                 {stat.code}
@@ -479,12 +708,6 @@ export const Dashboard: React.FC = () => {
               </div>
             </div>
           ))}
-        </div>
-        <div className="w-full bg-zinc-900/30 border border-dashed border-zinc-800 p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 group hover:border-red-900/30 transition-colors">
-            <span className="text-xs text-zinc-500 font-mono uppercase tracking-widest">PONTOS DISPONÍVEIS</span>
-            <span className="text-xl font-bold font-mono text-red-600 animate-pulse">
-              0 <span className="inline-block w-2 h-4 bg-red-600 ml-1 animate-blink"></span>
-            </span>
         </div>
       </div>
     );
@@ -1017,6 +1240,9 @@ export const Dashboard: React.FC = () => {
         {activeTab === 'ORACLE' && renderOracle()}
         {activeTab === 'PROFILE' && renderProfile()}
       </main>
+
+      {/* MISSION DETAIL MODAL */}
+      {selectedMission && <MissionDetailModal mission={selectedMission} />}
 
     </div>
   );

@@ -24,6 +24,15 @@ export async function GET() {
 
   const text = await resp.text();
   if (!resp.ok) {
+    // Se o usuário não existe (404), retornar 404 ao invés de 502
+    // Isso é esperado para novos usuários que ainda não completaram o onboarding
+    if (resp.status === 404) {
+      return NextResponse.json(
+        { error: "Usuário não encontrado.", needsOnboarding: true },
+        { status: 404 },
+      );
+    }
+    
     return NextResponse.json(
       { error: "Backend recusou.", details: text },
       { status: 502 },

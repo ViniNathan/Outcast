@@ -146,19 +146,6 @@ export function buildAttributeRewards(attributesFocus: string[], category: strin
   return rewards;
 }
 
-export function buildFallbackMissionProposal(objectiveDescription: string) {
-  return {
-    title: "Operacao de contingencia",
-    description: `Executar uma tarefa simples ligada a: ${objectiveDescription}`,
-    category: "daily",
-    difficulty: "E",
-    progress: {
-      target: 1,
-      unit: "acao",
-    },
-    attributesFocus: ["consistency"],
-  };
-}
 
 export function buildInitialMissions(objectiveDescription: string) {
   return [

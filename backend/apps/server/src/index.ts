@@ -140,25 +140,49 @@ function buildMissionCreateData({
   proposal: {
     title: string;
     description: string;
-    category: string;
-    difficulty: string;
-    progress: { target: number; unit: string };
-    attributesFocus: string[];
+    category?: string;
+    type?: string;
+    difficulty?: string;
+    progress?: { target: number; unit: string };
+    total?: number;
+    unit?: string;
+    attributesFocus?: string[];
+    stat_reward_code?: string;
+    stat_reward_value?: number;
   };
   source: (typeof MISSION_SOURCES)[keyof typeof MISSION_SOURCES];
   now: Date;
 }) {
-  const category = normalizeCategory(proposal.category);
-  const difficultyRaw = proposal.difficulty.toUpperCase();
-  const allowedDifficulties = Object.values(MISSION_DIFFICULTIES);
-  const difficulty = allowedDifficulties.includes(
-    difficultyRaw as (typeof MISSION_DIFFICULTIES)[keyof typeof MISSION_DIFFICULTIES],
-  )
-    ? (difficultyRaw as (typeof MISSION_DIFFICULTIES)[keyof typeof MISSION_DIFFICULTIES])
-    : MISSION_DIFFICULTIES.E;
+  // Suporta tanto o formato antigo quanto o novo
+  const categoryInput = proposal.type || proposal.category || "daily";
+  const category = normalizeCategory(categoryInput);
+  
+  // Calcula dificuldade baseada no tipo de missão se não fornecida
+  let difficulty: (typeof MISSION_DIFFICULTIES)[keyof typeof MISSION_DIFFICULTIES];
+  if (proposal.difficulty) {
+    const difficultyRaw = proposal.difficulty.toUpperCase();
+    const allowedDifficulties = Object.values(MISSION_DIFFICULTIES);
+    difficulty = allowedDifficulties.includes(
+      difficultyRaw as (typeof MISSION_DIFFICULTIES)[keyof typeof MISSION_DIFFICULTIES],
+    )
+      ? (difficultyRaw as (typeof MISSION_DIFFICULTIES)[keyof typeof MISSION_DIFFICULTIES])
+      : MISSION_DIFFICULTIES.E;
+  } else {
+    // Auto-assign difficulty based on category
+    difficulty = category === MISSION_CATEGORIES.MONTHLY 
+      ? MISSION_DIFFICULTIES.A 
+      : category === MISSION_CATEGORIES.WEEKLY 
+      ? MISSION_DIFFICULTIES.C 
+      : MISSION_DIFFICULTIES.E;
+  }
+  
   const xpReward = calculateXpReward(difficulty, category);
   const xpPenalty = calculateXpPenalty(xpReward);
   const attributesRewarded = buildAttributeRewards(proposal.attributesFocus ?? [], category);
+  
+  // Usa total/unit (novo formato) ou progress.target/progress.unit (formato antigo)
+  const progressTarget = proposal.total || proposal.progress?.target || 1;
+  const progressUnit = proposal.unit || proposal.progress?.unit || "ação";
 
   return {
     playerId,
@@ -170,9 +194,11 @@ function buildMissionCreateData({
     xpReward,
     xpPenalty,
     attributesRewarded,
+    statRewardCode: proposal.stat_reward_code || null,
+    statRewardValue: proposal.stat_reward_value || null,
     progressCurrent: 0,
-    progressTarget: proposal.progress.target,
-    progressUnit: proposal.progress.unit,
+    progressTarget,
+    progressUnit,
     expiresAt: getExpiresAtForCategory(category, now),
     source,
   };
@@ -265,7 +291,8 @@ async function generateMissionFromChain({
     },
   });
 
-  const { proposal, fallback } = await generateMissionProposal({
+  const { result } = await generateMissionProposal({
+    playerName: player.user.name,
     level: player.level,
     class: player.class,
     age: player.user.age,
@@ -275,16 +302,21 @@ async function generateMissionFromChain({
     message,
   });
 
-  const mission = await prisma.mission.create({
-    data: buildMissionCreateData({
-      playerId,
-      proposal,
-      source,
-      now,
-    }),
-  });
+  // Criar todas as missões retornadas pela IA
+  const missions = await prisma.$transaction(
+    result.new_missions.map((missionData) =>
+      prisma.mission.create({
+        data: buildMissionCreateData({
+          playerId,
+          proposal: missionData,
+          source,
+          now,
+        }),
+      }),
+    ),
+  );
 
-  return { mission, fallback };
+  return { missions, message: result.message };
 }
 
 new Elysia()
@@ -363,22 +395,40 @@ new Elysia()
           },
         });
 
-        const missionTemplates = buildInitialMissions(description);
-        const now = new Date();
-        const missions = await prisma.$transaction(
-          missionTemplates.map((mission) =>
-            prisma.mission.create({
-              data: {
-                ...buildMissionCreateData({
-                  playerId: player.id,
-                  proposal: mission,
-                  source: MISSION_SOURCES.AUTOMATIC,
-                  now,
-                }),
-              },
-            }),
-          ),
-        );
+        // Gerar missões iniciais via IA
+        let missions: Array<{ id: string; title: string }> = [];
+        try {
+          const result = await generateMissionFromChain({
+            playerId: player.id,
+            message: `Criar um conjunto inicial de missões para começar. Preciso de algumas missões DIÁRIAS (3-5), 1 missão SEMANAL e 1 missão MENSAL que se complementem.`,
+            source: MISSION_SOURCES.AUTOMATIC,
+            requireAutoEnabled: false,
+            enforceRateLimit: false,
+          });
+          
+          if ("missions" in result && result.missions) {
+            missions = result.missions;
+          }
+        } catch (error) {
+          console.error("[POST /objective] Erro ao gerar missões via IA:", error);
+          // Se falhar, usar fallback simples
+          const missionTemplates = buildInitialMissions(description);
+          const now = new Date();
+          missions = await prisma.$transaction(
+            missionTemplates.map((mission) =>
+              prisma.mission.create({
+                data: {
+                  ...buildMissionCreateData({
+                    playerId: player.id,
+                    proposal: mission,
+                    source: MISSION_SOURCES.AUTOMATIC,
+                    now,
+                  }),
+                },
+              }),
+            ),
+          );
+        }
 
         await prisma.systemLog.createMany({
           data: [
@@ -389,7 +439,7 @@ new Elysia()
             },
             {
               playerId: player.id,
-              message: "Missoes iniciais criadas",
+              message: `Missoes iniciais criadas: ${missions.length}`,
               type: LOG_TYPES.SUCCESS,
             },
           ],
@@ -464,11 +514,17 @@ new Elysia()
           return { error: "Nada para atualizar" };
         }
 
-        const user = await prisma.user.update({
+        // Usar upsert para criar se não existir
+        const user = await prisma.user.upsert({
           where: { authUserId },
-          data: {
+          update: {
             ...(name !== undefined ? { name } : {}),
             ...(age !== undefined ? { age } : {}),
+          },
+          create: {
+            authUserId,
+            name: name ?? "Usuário",
+            age: age ?? 18,
           },
         });
 
@@ -530,12 +586,12 @@ new Elysia()
         await prisma.systemLog.create({
           data: {
             playerId,
-            message: "Automatic mission generation executed.",
+            message: `Geração automática: ${result.missions?.length || 0} missões criadas.`,
             type: LOG_TYPES.INFO,
           },
         });
 
-        return { mission: result.mission, fallback: result.fallback };
+        return { missions: result.missions, message: result.message };
       })
       .post("/missions/request", async (context) => {
         console.log("[POST /missions/request] Iniciando...");
@@ -569,12 +625,12 @@ new Elysia()
           await prisma.systemLog.create({
             data: {
               playerId,
-              message: "User-requested mission generated.",
+              message: `Missões solicitadas: ${result.missions?.length || 0} criadas.`,
               type: LOG_TYPES.INFO,
             },
           });
 
-          return { mission: result.mission, fallback: result.fallback };
+          return { missions: result.missions, message: result.message };
         } catch (err) {
           console.error("[POST /missions/request] EXCEÇÃO:", err);
           context.set.status = 500;
@@ -608,12 +664,12 @@ new Elysia()
         await prisma.systemLog.create({
           data: {
             playerId,
-            message: "Automatic mission generation executed.",
+            message: `Geração automática: ${result.missions?.length || 0} missões criadas.`,
             type: LOG_TYPES.INFO,
           },
         });
 
-        return { mission: result.mission, fallback: result.fallback };
+        return { missions: result.missions, message: result.message };
       })
       .get("/missions", async (context) => {
         const parsed = missionsQuerySchema.safeParse(context.query);
@@ -673,6 +729,23 @@ new Elysia()
 
         const updatedProgress = applyXpDelta(mission.player.xp, mission.xpReward);
 
+        // Aplicar stats se a missão tiver recompensa de stats
+        let currentAttributes = (mission.player.attributes as Record<string, number> | null) || {
+          FOR: 10,
+          AGI: 10,
+          VIT: 10,
+          INT: 10,
+          SEN: 10,
+        };
+
+        if (mission.statRewardCode && mission.statRewardValue) {
+          const code = mission.statRewardCode;
+          currentAttributes = {
+            ...currentAttributes,
+            [code]: (currentAttributes[code] || 10) + mission.statRewardValue,
+          };
+        }
+
         const updatedMission = await prisma.mission.update({
           where: { id: mission.id },
           data: { status: "COMPLETED", completedAt: new Date() },
@@ -684,14 +757,20 @@ new Elysia()
             xp: updatedProgress.xp,
             level: updatedProgress.level,
             class: updatedProgress.class,
+            attributes: currentAttributes,
             lastActiveAt: new Date(),
           },
         });
 
+        const logMessages = [`Missao concluida: ${mission.title}`];
+        if (mission.statRewardCode && mission.statRewardValue) {
+          logMessages.push(`+${mission.statRewardValue} ${mission.statRewardCode}`);
+        }
+
         await prisma.systemLog.create({
           data: {
             playerId: mission.playerId,
-            message: `Missao concluida: ${mission.title}`,
+            message: logMessages.join(" | "),
             type: LOG_TYPES.SUCCESS,
           },
         });

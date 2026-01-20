@@ -21,6 +21,8 @@ export interface Mission {
   xpReward: number;
   xpPenalty: number;
   attributesRewarded?: Record<string, number> | null;
+  statRewardCode?: string | null;
+  statRewardValue?: number | null;
   progressCurrent: number;
   progressTarget: number;
   progressUnit: string;

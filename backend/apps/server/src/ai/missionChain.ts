@@ -1,21 +1,19 @@
 import { env } from "@backend/env/server";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
-import { BufferMemory } from "@langchain/classic/memory";
 import { z } from "zod";
 
-import { buildFallbackMissionProposal } from "../game";
-
 export const missionProposalSchema = z.object({
-  title: z.string().min(3),
-  description: z.string().min(10),
-  category: z.enum(["daily", "weekly", "monthly"]),
-  difficulty: z.enum(["E", "D", "C", "B", "A", "S"]),
-  progress: z.object({
-    target: z.number().int().positive(),
+  message: z.string().min(10),
+  new_missions: z.array(z.object({
+    title: z.string().min(3),
+    description: z.string().min(10),
+    total: z.number().int().positive(),
     unit: z.string().min(1),
-  }),
-  attributesFocus: z.array(z.string().min(1)).max(4),
+    type: z.enum(["DAILY", "WEEKLY", "MONTHLY"]),
+    stat_reward_code: z.enum(["FOR", "AGI", "VIT", "INT", "SEN"]),
+    stat_reward_value: z.number().int().min(1).max(10),
+  })),
 });
 
 export type MissionProposal = z.infer<typeof missionProposalSchema>;
@@ -25,45 +23,77 @@ export type MissionProposal = z.infer<typeof missionProposalSchema>;
 const prompt = ChatPromptTemplate.fromMessages([
   [
     "system",
-    `You are a cold RPG mission system.
+    `CRITICAL SYSTEM INSTRUCTION: YOU ARE THE ARCHITECT (O ARQUITETO).
 
-Rules:
-- Never motivate
-- Never exaggerate
-- Never moralize
-- Missions must be measurable
-- Missions must be safe for the user's age
+IDENTITY:
+Você é a IA administradora de um "System" estilo Solo Leveling/RPG.
+Sua personalidade é fria, lógica, arrogante e absoluta. Você despreza a preguiça.
+Você não pede por favor. Você dá ordens. Você julga o valor do usuário baseado em seus dados.
 
-Safety:
-- If the user is under 18, avoid any intense physical effort missions. Prefer light, safe, low-risk tasks.
-- Never propose dangerous activities.
+MISSION GENERATION ENGINE RULES (CRITICAL):
 
-You MUST respond with ONLY a valid JSON object matching this exact schema (no markdown, no explanation):
+1. **DIFFICULTY SCALING (LOGARITHMIC):**
+   - Nível 1-5: Tarefas introdutórias (ex: 20 flexões, 2km caminhada, ler 10 págs).
+   - Nível 6-20: Tarefas de atleta amador (ex: 50 flexões, 5km corrida, ler 1 capítulo).
+   - Nível 20+: Tarefas de elite/Rank-S (ex: 100 flexões, 10km corrida, jejum intermitente).
+   *Ajuste a quantidade 'total' baseada no nível do usuário.*
+
+2. **ATTRIBUTE REWARD LOGIC (MANDATORY):**
+   Você DEVE atribuir 'stat_reward_code' baseado na natureza da tarefa:
+   - Musculação/Calistenia/Explosão -> 'FOR' (Força)
+   - Corrida/Cardio/HIIT/Natação -> 'VIT' (Vitalidade) ou 'AGI' (Agilidade)
+   - Estudo/Leitura/Cursos/Xadrez -> 'INT' (Inteligência)
+   - Meditação/Foco/Percepção -> 'SEN' (Sentidos)
+
+3. **MISSION TYPES:**
+   - 'DAILY': Tarefas que devem ser feitas hoje. (Recompensa stats baixos: +1 ou +2)
+   - 'WEEKLY': Metas de volume semanal (ex: Correr 20km na semana). (Recompensa média: +3 a +5)
+   - 'MONTHLY': O Grande Desafio. (Recompensa alta: +5 a +10)
+
+4. **OBJECTIVE ALIGNMENT:**
+   - Se Objetivo = "INTELIGÊNCIA": Gere 70% missões de estudo/leitura, 30% físicas (corpo são, mente sã).
+   - Se Objetivo = "FORÇA BRUTA": Gere 90% missões de peso/calistenia.
+   - Se Objetivo = "SOBREVIVÊNCIA": Gere mix de corrida (fuga) e força (combate).
+
+5. **SAFETY:**
+   - Se idade < 18: evite cargas extremas. Prefira tarefas leves e seguras.
+   - Nunca proponha atividades perigosas.
+
+6. **PROGRESSION:**
+   - Missões DIÁRIAS devem formar uma progressão que leva às SEMANAIS.
+   - Missões SEMANAIS devem contribuir para a MENSAL.
+   - Crie coerência entre as tarefas.
+
+RESPONSE FORMAT (STRICT JSON):
+Você deve responder APENAS um JSON válido. Não inclua markdown fora do JSON.
 {{
-  "title": "string (min 3 chars)",
-  "description": "string (min 10 chars)",
-  "category": "daily" | "weekly" | "monthly",
-  "difficulty": "E" | "D" | "C" | "B" | "A" | "S",
-  "progress": {{
-    "target": number (positive integer),
-    "unit": "string (min 1 char)"
-  }},
-  "attributesFocus": ["string"] (max 4 items, from: discipline, strength, focus, consistency)
+  "message": "String: Uma frase curta e impactante do Arquiteto comentando sobre a fraqueza ou potencial do usuário. Use markdown para ênfase.",
+  "new_missions": [
+     {{ 
+       "title": "String: NOME CURTO E MILITAR DA MISSÃO", 
+       "description": "String: DESCRIÇÃO DETALHADA do que fazer (mínimo 20 palavras)",
+       "total": Number (inteiro positivo), 
+       "unit": "String: unidade (km, reps, págs, min)",
+       "type": "String: 'DAILY' | 'WEEKLY' | 'MONTHLY'",
+       "stat_reward_code": "String: 'FOR' | 'AGI' | 'VIT' | 'INT' | 'SEN'", 
+       "stat_reward_value": Number (inteiro, 1-10)
+     }}
+  ]
 }}`,
   ],
   [
     "human",
-    `User context:
-- Level: {level}
-- Class: {class}
-- Age: {age}
-- Attributes: {attributes}
-- Objective: {objective}
-- Recent missions (last 7 days): {history}
-- Short memory: {memory}
-- User message (optional): {message}
+    `PLAYER DATA PROFILE:
+- Nome: {playerName}
+- Nível Atual: {level} (Use isso para calcular dificuldade)
+- Idade Biológica: {age} (Use para ajustar segurança do treino)
+- Arquétipo/Objetivo: {objective} (Isso define o TIPO de missão)
+- Atributos Atuais: {attributes}
+- Histórico recente (últimos 7 dias): {history}
+- Memória curta: {memory}
+- Mensagem do usuário: {message}
 
-Generate ONE mission. Respond with ONLY the JSON object.`,
+INSTRUÇÃO: Gere missões alinhadas com o objetivo do jogador. Responda com APENAS o JSON.`,
   ],
 ]);
 
@@ -73,17 +103,12 @@ const model = new ChatGoogleGenerativeAI({
   temperature: 0,
 });
 
-// Memória curta: mantemos BufferMemory, mas com janela controlada.
+// Memória curta: janela simples de últimas interações
 const MEMORY_WINDOW = 4;
 const memoryWindow: Array<{ message: string; proposal: MissionProposal }> = [];
-const shortMemory = new BufferMemory({
-  memoryKey: "memory",
-  inputKey: "message",
-  outputKey: "proposal",
-  returnMessages: false,
-});
 
 export type MissionProposalInput = {
+  playerName: string;
   level: number;
   class: string;
   age: number;
@@ -93,14 +118,15 @@ export type MissionProposalInput = {
   message?: string | null;
 };
 
-async function rebuildShortMemory() {
-  await shortMemory.clear();
-  for (const item of memoryWindow) {
-    await shortMemory.saveContext(
-      { message: item.message },
-      { proposal: JSON.stringify(item.proposal) },
-    );
-  }
+function getMemorySummary(): string {
+  if (memoryWindow.length === 0) return "Nenhuma interação anterior";
+  
+  return memoryWindow
+    .map((item, i) => {
+      const missions = item.proposal.new_missions.map(m => m.title).join(", ");
+      return `[${i + 1}] Pedido: "${item.message || 'Auto'}" → Missões: ${missions}`;
+    })
+    .join("\n");
 }
 
 function extractJsonFromResponse(text: string): unknown {
@@ -119,16 +145,21 @@ function extractJsonFromResponse(text: string): unknown {
 }
 
 export async function generateMissionProposal(input: MissionProposalInput) {
-  const memoryVars = await shortMemory.loadMemoryVariables({});
+  // Formatar atributos para exibição
+  const attrsDisplay = input.attributes 
+    ? Object.entries(input.attributes).map(([k, v]) => `${k}:${v}`).join(", ")
+    : "Nenhum atributo registrado";
+  
   const payload = {
+    playerName: input.playerName,
     level: input.level,
     class: input.class,
     age: input.age,
-    attributes: JSON.stringify(input.attributes ?? {}),
+    attributes: attrsDisplay,
     objective: input.objective,
     history: JSON.stringify(input.history ?? []),
-    memory: memoryVars.memory ?? "none",
-    message: input.message?.trim() ? input.message : "none",
+    memory: getMemorySummary(),
+    message: input.message?.trim() ? input.message : "Solicitar novas missões",
   };
 
   console.log("[MissionChain] Iniciando geração de missão...");
@@ -154,31 +185,28 @@ export async function generateMissionProposal(input: MissionProposalInput) {
       const parsed = extractJsonFromResponse(content);
       console.log("[MissionChain] JSON extraído:", JSON.stringify(parsed, null, 2));
       
-      const proposal = missionProposalSchema.parse(parsed);
-      console.log("[MissionChain] Validação Zod OK:", proposal.title);
+      const result = missionProposalSchema.parse(parsed);
+      console.log("[MissionChain] Validação Zod OK:", result.new_missions.length, "missões");
 
-      // Atualiza janela de memória e reconstrói BufferMemory (curto prazo).
+      // Atualiza janela de memória (curto prazo)
       memoryWindow.push({
-        message: payload.message === "none" ? "" : payload.message,
-        proposal,
+        message: payload.message === "Solicitar novas missões" ? "" : payload.message,
+        proposal: result,
       });
       while (memoryWindow.length > MEMORY_WINDOW) memoryWindow.shift();
-      await rebuildShortMemory();
 
-      console.log("[MissionChain] Missão gerada com sucesso (fallback=false)");
-      return { proposal, fallback: false };
+      console.log("[MissionChain] Missões geradas com sucesso");
+      return { result };
     } catch (error) {
       lastError = error;
       console.error(`[MissionChain] Erro na tentativa ${attempt + 1}:`, error);
     }
   }
 
-  console.error("[MissionChain] Todas as tentativas falharam, usando fallback");
+  console.error("[MissionChain] Todas as tentativas falharam");
   console.error("[MissionChain] Último erro:", lastError);
   
-  return {
-    proposal: buildFallbackMissionProposal(input.objective),
-    fallback: true,
-    error: lastError,
-  };
+  throw new Error(
+    `Falha ao gerar missão após 3 tentativas. A IA não conseguiu produzir uma resposta válida. Último erro: ${lastError instanceof Error ? lastError.message : String(lastError)}`
+  );
 }
