@@ -2,10 +2,8 @@
 
 import { signIn } from "next-auth/react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { ChevronLeft } from "lucide-react";
-
-type Mode = "login" | "register";
 
 const errorPtBr: Record<string, string> = {
   OAuthAccountNotLinked:
@@ -18,57 +16,16 @@ const errorPtBr: Record<string, string> = {
 };
 
 export function AuthCard({
-  mode,
   error,
 }: {
-  mode: Mode;
   error?: string;
 }) {
-  const title = mode === "login" ? "ACESSO AO SISTEMA" : "REGISTRO OBRIGATÓRIO";
-  const subtitle =
-    mode === "login"
-      ? "Identifique-se para prosseguir."
-      : "O sistema requer seus dados biométricos e psicológicos.";
-
-  const [nome, setNome] = useState("");
-  const [idade, setIdade] = useState("");
-  const [objetivo, setObjetivo] = useState("");
-  const [localError, setLocalError] = useState<string | null>(null);
-
   const errorMessage = useMemo(() => {
     if (!error) return null;
     return errorPtBr[error] ?? errorPtBr.Default;
   }, [error]);
 
   const handleContinue = async () => {
-    setLocalError(null);
-
-    if (mode === "register") {
-      if (!nome.trim() || !idade.trim() || !objetivo.trim()) {
-        setLocalError("Preencha Nome, Idade e Objetivo para continuar.");
-        return;
-      }
-      const idadeNum = Number(idade);
-      if (!Number.isFinite(idadeNum) || idadeNum <= 0 || idadeNum > 120) {
-        setLocalError("Idade inválida.");
-        return;
-      }
-
-      try {
-        window.localStorage.setItem(
-          "outcast_profile_pending",
-          JSON.stringify({
-            nome: nome.trim(),
-            idade: idadeNum,
-            objetivo: objetivo.trim(),
-            createdAt: new Date().toISOString(),
-          })
-        );
-      } catch {
-        // Se falhar, ainda permitimos login; só não persistimos o perfil local.
-      }
-    }
-
     await signIn("google", { callbackUrl: "/?next=dashboard" });
   };
 
@@ -87,68 +44,17 @@ export function AuthCard({
         
         <div className="space-y-2 mb-8 border-l-4 border-red-900/80 pl-4">
           <h1 className="text-2xl font-bold tracking-tight text-zinc-100 font-mono uppercase">
-            {title}
+            ACESSO AO SISTEMA
           </h1>
           <p className="text-xs text-zinc-500 font-mono uppercase tracking-wide">
-            {subtitle}
+            Identifique-se para prosseguir.
           </p>
         </div>
 
-        {errorMessage || localError ? (
+        {errorMessage ? (
           <div className="mt-4 border border-red-900/40 bg-red-950/20 p-3 text-sm text-red-400 font-mono">
-            {localError ?? errorMessage}
+            {errorMessage}
           </div>
-        ) : null}
-
-        {mode === "register" ? (
-          <div className="mt-8 space-y-5">
-            <div className="space-y-2">
-              <label className="text-[10px] font-mono uppercase tracking-widest text-red-900/80 block">
-                Identificação do Receptáculo
-              </label>
-              <input
-                value={nome}
-                onChange={(e) => setNome(e.target.value)}
-                className="w-full bg-black border border-zinc-800 p-3 text-zinc-300 font-mono text-sm placeholder:text-zinc-700 focus:border-red-900/50 focus:outline-none transition-colors uppercase"
-                placeholder="SEU NOME / APELIDO"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-[10px] font-mono uppercase tracking-widest text-zinc-600 block" htmlFor="idade">
-                  Ciclo Biológico (Idade)
-                </label>
-                <input
-                  value={idade}
-                  onChange={(e) => setIdade(e.target.value.replace(/\D/g, ""))}
-                  inputMode="numeric"
-                  className="w-full bg-black border border-zinc-800 p-3 text-zinc-300 font-mono text-sm placeholder:text-zinc-700 focus:border-red-900/50 focus:outline-none transition-colors"
-                  placeholder="00"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-[10px] font-mono uppercase tracking-widest text-red-900/80 block">
-                  Diretriz Primária
-                </label>
-                <select
-                  value={objetivo}
-                  onChange={(e) => setObjetivo(e.target.value)}
-                  className="w-full bg-black border border-zinc-800 p-3 text-zinc-300 font-mono text-sm focus:border-red-900/50 focus:outline-none transition-colors uppercase appearance-none cursor-pointer"
-                >
-                  <option value="" disabled className="text-zinc-700">SELECIONE</option>
-                  <option value="Sobrevivência">Sobrevivência</option>
-                  <option value="Força Bruta">Força Bruta</option>
-                  <option value="Inteligência">Inteligência</option>
-                  <option value="Velocidade">Velocidade</option>
-                  <option value="Vingança">Vingança</option>
-                  <option value="Conquista Global">Conquista Global</option>
-                </select>
-              </div>
-            </div>
-          </div>
-          
         ) : null}
 
         <div className="mt-8 space-y-4">
@@ -158,7 +64,7 @@ export function AuthCard({
             className="group relative inline-flex h-14 w-full items-center justify-center overflow-hidden bg-red-900/20 border border-red-900/30 text-red-500 font-mono font-bold uppercase tracking-widest transition-all hover:bg-red-900/30 hover:text-red-400 hover:border-red-900/50"
           >
             <span className="relative z-10 flex items-center gap-2">
-              {mode === "login" ? "Acessar Sistema" : "Inicializar Sistema"}
+              Acessar Sistema
             </span>
           </button>
 
@@ -166,23 +72,6 @@ export function AuthCard({
             Ao continuar, você concorda com os protocolos de segurança.
           </p>
         </div>
-      </div>
-
-      <div className="mt-4 text-center">
-        <Link
-          href={mode === "login" ? "/register" : "/login"}
-          className="text-md text-zinc-500 hover:text-zinc-300 transition-colors font-mono"
-        >
-          {mode === "login" ? (
-            <>
-              Não tem acesso? <span className="underline">Solicitar registro</span>
-            </>
-          ) : (
-            <>
-              Já tem uma conta? <span className="underline">Acessar sistema</span>
-            </>
-          )}
-        </Link>
       </div>
     </div>
   );

@@ -4,11 +4,12 @@ import React, { useEffect, useState } from 'react';
 import { TerminalEntry } from '@/components/TerminalEntry';
 import { SystemInterface } from '@/components/SystemInterface';
 import { Dashboard } from '@/components/dashbooard/Dashboard';
+import { OnboardingScreen } from '@/components/auth/OnboardingScreen';
 import { useSession } from 'next-auth/react';
 import { useSearchParams } from 'next/navigation';
 
 const App: React.FC = () => {
-  const [systemState, setSystemState] = useState<'INITIALIZING' | 'BOOT' | 'LANDING' | 'DASHBOARD'>('INITIALIZING');
+  const [systemState, setSystemState] = useState<'INITIALIZING' | 'BOOT' | 'LANDING' | 'ONBOARDING' | 'DASHBOARD'>('INITIALIZING');
   const [hasVisited, setHasVisited] = useState<boolean>(false);
   const { status, data: session } = useSession();
   const searchParams = useSearchParams();
@@ -35,7 +36,7 @@ const App: React.FC = () => {
   }, []);
 
   // Se o usuário acabou de voltar do NextAuth com intenção explícita de entrar no dashboard,
-  // só então redirecionamos automaticamente (ex.: pós-login/registro).
+  // verificamos se o User existe no backend.
   useEffect(() => {
     const next = searchParams.get('next');
     if (next !== 'dashboard') return;
@@ -50,68 +51,39 @@ const App: React.FC = () => {
         console.error('Erro ao salvar no localStorage:', e);
       }
 
-      // Se existir um perfil criado no registro antes do login, tenta sincronizar com o backend
-      // e depois "promove" localmente para um storage por usuário.
-      try {
-        if (session?.user?.id) {
-          const userId = session.user.id;
-          const pending = window.localStorage.getItem('outcast_profile_pending');
-          const key = `outcast_profile_v1:${userId}`;
-          const syncedKey = `outcast_profile_synced_v1:${userId}`;
-
-          // Primeiro, garante que existe um "perfil por usuário" (para poder tentar sync depois)
-          if (pending && !window.localStorage.getItem(key)) {
-            window.localStorage.setItem(key, pending);
+      // Verifica se o User existe e se precisa completar o onboarding
+      void (async () => {
+        try {
+          const meResp = await fetch('/api/dashboard/me', { cache: 'no-store' });
+          
+          if (!meResp.ok) {
+            // User não existe no backend (erro inesperado) - mostrar onboarding
+            console.error('[PAGE] Usuário não encontrado no backend');
+            setSystemState('ONBOARDING');
+          } else {
+            // User existe - verificar se precisa completar onboarding
+            const data = await meResp.json();
+            console.log('[PAGE] Dados do usuário:', data);
+            
+            // Se description é "Pendente", precisa completar onboarding
+            if (data?.objective?.description === 'Pendente') {
+              console.log('[PAGE] Objetivo pendente - mostrando onboarding');
+              setSystemState('ONBOARDING');
+            } else {
+              console.log('[PAGE] Perfil completo - indo para dashboard');
+              setSystemState('DASHBOARD');
+            }
           }
-
-          // Agora tenta sincronizar (se ainda não sincronizou)
-          const source = pending ?? window.localStorage.getItem(key);
-          if (source && !window.localStorage.getItem(syncedKey)) {
-            void (async () => {
-              try {
-                const parsed = JSON.parse(source) as {
-                  nome?: string;
-                  idade?: number;
-                  objetivo?: string;
-                };
-
-                const resp = await fetch('/api/profile/sync', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    nome: parsed?.nome,
-                    idade: parsed?.idade,
-                    objetivo: parsed?.objetivo,
-                  }),
-                });
-
-                if (resp.ok) {
-                  window.localStorage.setItem(syncedKey, 'true');
-                  // Só remove o pending quando der certo (senão, permite retry)
-                  if (pending) {
-                    window.localStorage.removeItem('outcast_profile_pending');
-                  }
-                } else {
-                  console.error(
-                    'Falha ao sincronizar perfil com backend:',
-                    await resp.text(),
-                  );
-                }
-              } catch (e) {
-                console.error('Erro ao sincronizar perfil com backend:', e);
-              }
-            })();
-          }
+        } catch (e) {
+          console.error('[PAGE] Erro ao verificar usuário:', e);
+          // Em caso de erro, mostrar onboarding para garantir
+          setSystemState('ONBOARDING');
         }
-      } catch (e) {
-        console.error('Erro ao sincronizar/promover perfil pendente:', e);
-      }
-
-      setSystemState('DASHBOARD');
+      })();
     }, 0);
 
     return () => clearTimeout(timeout);
-  }, [searchParams, status, session?.user?.id]);
+  }, [searchParams, status]);
 
   const handleBootComplete = () => {
     setSystemState('LANDING');
@@ -128,6 +100,12 @@ const App: React.FC = () => {
     setSystemState('DASHBOARD');
   };
 
+  const handleOnboardingComplete = () => {
+    // Após completar onboarding, marcar como primeiro acesso para mostrar tutorial
+    setHasVisited(false);
+    setSystemState('LANDING');
+  };
+
   // Evita flash do conteúdo inicial enquanto verifica o localStorage
   if (systemState === 'INITIALIZING') {
     return <div className="min-h-screen bg-black" />;
@@ -142,6 +120,10 @@ const App: React.FC = () => {
         
         {systemState === 'LANDING' && (
           <SystemInterface onAwaken={handleAwaken} isFirstAccess={!hasVisited} />
+        )}
+
+        {systemState === 'ONBOARDING' && (
+          <OnboardingScreen onComplete={handleOnboardingComplete} />
         )}
 
         {systemState === 'DASHBOARD' && (

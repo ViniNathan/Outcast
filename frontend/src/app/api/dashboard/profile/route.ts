@@ -27,7 +27,7 @@ export async function POST(req: Request) {
   }
 
   const backendUrl =
-    process.env.BACKEND_URL?.trim() || "http://localhost:3000";
+    (process.env.BACKEND_URL?.trim() || "http://localhost:3000").replace(/\/+$/, "");
   const syncSecret = process.env.BACKEND_SYNC_SECRET?.trim();
 
   const resp = await fetch(`${backendUrl}/api/user/update`, {

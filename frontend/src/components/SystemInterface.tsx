@@ -26,7 +26,7 @@ export const SystemInterface: React.FC<SystemInterfaceProps> = ({ onAwaken, isFi
       onAwaken();
       return;
     }
-    router.push(isFirstAccess ? '/register' : '/login');
+    router.push('/login');
   };
 
   return (
