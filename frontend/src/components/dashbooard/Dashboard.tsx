@@ -737,27 +737,6 @@ export const Dashboard: React.FC = () => {
             </div>
 
             {identityCard}
-
-            <div className="space-y-3">
-              <div className="space-y-1">
-                <div className="flex justify-between text-[10px] font-mono text-zinc-500">
-                  <span>HP</span>
-                  <span>100/100</span>
-                </div>
-                <div className="h-3 w-full bg-zinc-950 border border-zinc-800">
-                  <div className="h-full bg-red-900 w-full shadow-[0_0_10px_rgba(127,29,29,0.3)]" />
-                </div>
-              </div>
-              <div className="space-y-1">
-                <div className="flex justify-between text-[10px] font-mono text-zinc-500">
-                  <span>MP</span>
-                  <span>35/35</span>
-                </div>
-                <div className="h-3 w-full bg-zinc-950 border border-zinc-800">
-                  <div className="h-full bg-blue-900/60 w-full shadow-[0_0_10px_rgba(30,58,138,0.3)]" />
-                </div>
-              </div>
-            </div>
           </div>
 
           <div className="lg:col-span-8 space-y-8">
