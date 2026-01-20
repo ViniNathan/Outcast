@@ -55,6 +55,35 @@ const logQuerySchema = z.object({
   limit: z.coerce.number().int().positive().max(200).optional(),
 });
 
+const meQuerySchema = z.object({
+  authUserId: z.string().min(1),
+});
+
+const updateUserSchema = z.object({
+  authUserId: z.string().min(1),
+  name: z.string().min(1).optional(),
+  age: z.coerce.number().int().positive().optional(),
+});
+
+async function requireSyncSecret(context: { request: Request; set: { status?: unknown } }) {
+  if (!env.BACKEND_SYNC_SECRET) return true;
+  const provided = context.request.headers.get("x-sync-secret");
+  if (provided !== env.BACKEND_SYNC_SECRET) {
+    context.set.status = 401;
+    return false;
+  }
+  return true;
+}
+
+async function getRankingPosition(playerId: string) {
+  const players = await prisma.player.findMany({
+    orderBy: [{ level: "desc" }, { xp: "desc" }, { createdAt: "asc" }],
+    select: { id: true },
+  });
+  const index = players.findIndex((p) => p.id === playerId);
+  return index >= 0 ? index + 1 : null;
+}
+
 async function recalculateRanking() {
   const players = await prisma.player.findMany({
     orderBy: [{ level: "desc" }, { xp: "desc" }, { createdAt: "asc" }],
@@ -99,13 +128,7 @@ new Elysia()
       .post("/objective", async (context) => {
         // Proteção simples (opcional) para evitar que qualquer origem crie registros no seu backend.
         // Configure BACKEND_SYNC_SECRET no backend e BACKEND_SYNC_SECRET no frontend (Next API proxy).
-        if (env.BACKEND_SYNC_SECRET) {
-          const provided = context.request.headers.get("x-sync-secret");
-          if (provided !== env.BACKEND_SYNC_SECRET) {
-            context.set.status = 401;
-            return { error: "Nao autorizado" };
-          }
-        }
+        if (!(await requireSyncSecret(context))) return { error: "Nao autorizado" };
 
         const parsed = createObjectiveSchema.safeParse(context.body);
 
@@ -168,6 +191,74 @@ new Elysia()
           objective,
           missions,
         };
+      })
+      .get("/me", async (context) => {
+        if (!(await requireSyncSecret(context))) return { error: "Nao autorizado" };
+
+        const parsed = meQuerySchema.safeParse(context.query);
+        if (!parsed.success) {
+          context.set.status = 400;
+          return { error: parsed.error.flatten() };
+        }
+
+        const { authUserId } = parsed.data;
+
+        const user = await prisma.user.findUnique({
+          where: { authUserId },
+        });
+
+        if (!user) {
+          context.set.status = 404;
+          return { error: "Usuario nao encontrado" };
+        }
+
+        const player = await prisma.player.findUnique({
+          where: { userId: user.id },
+        });
+
+        if (!player) {
+          context.set.status = 404;
+          return { error: "Jogador nao encontrado" };
+        }
+
+        const latestObjective = await prisma.objective.findFirst({
+          where: { playerId: player.id },
+          orderBy: { createdAt: "desc" },
+        });
+
+        const position = await getRankingPosition(player.id);
+
+        return {
+          user,
+          player,
+          objective: latestObjective,
+          ranking: position ? { position } : null,
+        };
+      })
+      .post("/user/update", async (context) => {
+        if (!(await requireSyncSecret(context))) return { error: "Nao autorizado" };
+
+        const parsed = updateUserSchema.safeParse(context.body);
+        if (!parsed.success) {
+          context.set.status = 400;
+          return { error: parsed.error.flatten() };
+        }
+
+        const { authUserId, name, age } = parsed.data;
+        if (name === undefined && age === undefined) {
+          context.set.status = 400;
+          return { error: "Nada para atualizar" };
+        }
+
+        const user = await prisma.user.update({
+          where: { authUserId },
+          data: {
+            ...(name !== undefined ? { name } : {}),
+            ...(age !== undefined ? { age } : {}),
+          },
+        });
+
+        return { user };
       })
       .post("/missions/generate", async (context) => {
         const parsed = generateMissionsSchema.safeParse(context.body);
