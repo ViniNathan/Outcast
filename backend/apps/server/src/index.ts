@@ -75,6 +75,11 @@ const updateUserSchema = z.object({
   age: z.coerce.number().int().positive().optional(),
 });
 
+const updateObjectiveSchema = z.object({
+  playerId: z.string().min(1),
+  description: z.string().min(1),
+});
+
 const updateSettingsSchema = z.object({
   playerId: z.string().min(1),
   autoMissionGeneration: z.boolean().optional(),
@@ -530,6 +535,50 @@ new Elysia()
 
         return { user };
       })
+      .post("/objective/update", async (context) => {
+        if (!(await requireSyncSecret(context))) return { error: "Nao autorizado" };
+
+        const parsed = updateObjectiveSchema.safeParse(context.body);
+        if (!parsed.success) {
+          context.set.status = 400;
+          return { error: parsed.error.flatten() };
+        }
+
+        const { playerId, description } = parsed.data;
+        
+        if (description.trim().toLowerCase() === "pendente") {
+          context.set.status = 400;
+          return { error: "Objetivo invalido" };
+        }
+
+        // Verifica se o player existe
+        const player = await prisma.player.findUnique({
+          where: { id: playerId },
+        });
+
+        if (!player) {
+          context.set.status = 404;
+          return { error: "Jogador nao encontrado" };
+        }
+
+        // Cria um novo objetivo (mantém histórico)
+        const objective = await prisma.objective.create({
+          data: {
+            playerId,
+            description: description.trim(),
+          },
+        });
+
+        await prisma.systemLog.create({
+          data: {
+            playerId,
+            message: "Objetivo principal atualizado",
+            type: LOG_TYPES.INFO,
+          },
+        });
+
+        return { objective };
+      })
       .post("/player/settings", async (context) => {
         const parsed = updateSettingsSchema.safeParse(context.body);
 
@@ -552,7 +601,7 @@ new Elysia()
           },
           create: {
             playerId,
-            autoMissionGeneration: autoMissionGeneration ?? true,
+            autoMissionGeneration: autoMissionGeneration ?? false,
             isPremium: isPremium ?? false,
           },
         });

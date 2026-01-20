@@ -1,4 +1,21 @@
-const LEVEL_XP_MULTIPLIER = 100;
+// Fórmula exponencial para XP necessário por nível
+// Base de 100 XP, crescendo exponencialmente com fator 1.5
+const LEVEL_XP_BASE = 100;
+const LEVEL_XP_EXPONENT = 1.5;
+
+// Calcula o XP necessário para passar de um nível específico para o próximo
+function xpRequiredForLevel(level: number): number {
+  return Math.floor(LEVEL_XP_BASE * Math.pow(level, LEVEL_XP_EXPONENT));
+}
+
+// Calcula o XP total acumulado necessário para alcançar um determinado nível
+export function totalXpForLevel(targetLevel: number): number {
+  let total = 0;
+  for (let lvl = 1; lvl < targetLevel; lvl++) {
+    total += xpRequiredForLevel(lvl);
+  }
+  return total;
+}
 
 export const PLAYER_CLASSES = {
   OUTCAST: "OUTCAST",
@@ -50,14 +67,32 @@ export function getClassForLevel(level: number) {
 
 export function calculateLevelFromXp(xp: number) {
   let level = 1;
-  let remainingXp = xp;
+  let accumulatedXp = 0;
 
-  while (remainingXp >= level * LEVEL_XP_MULTIPLIER) {
-    remainingXp -= level * LEVEL_XP_MULTIPLIER;
+  // Continua subindo de nível enquanto o XP acumulado for suficiente
+  while (accumulatedXp + xpRequiredForLevel(level) <= xp) {
+    accumulatedXp += xpRequiredForLevel(level);
     level += 1;
   }
 
   return level;
+}
+
+// Retorna informações detalhadas sobre o progresso do nível
+export function getLevelProgress(xp: number) {
+  const level = calculateLevelFromXp(xp);
+  const xpForCurrentLevel = totalXpForLevel(level);
+  const xpForNextLevel = totalXpForLevel(level + 1);
+  const xpInCurrentLevel = xp - xpForCurrentLevel;
+  const xpNeededForNextLevel = xpForNextLevel - xpForCurrentLevel;
+  
+  return {
+    level,
+    currentXp: xp,
+    xpInCurrentLevel,
+    xpNeededForNextLevel,
+    progressPercent: Math.floor((xpInCurrentLevel / xpNeededForNextLevel) * 100),
+  };
 }
 
 export function applyXpDelta(currentXp: number, delta: number) {

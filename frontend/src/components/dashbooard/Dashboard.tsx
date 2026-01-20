@@ -30,7 +30,7 @@ const GENERATION_MESSAGES = [
 
 type BackendMeResponse = {
   user: { id: string; authUserId: string; name: string; age: number };
-  player: { id: string; xp: number; level: number; class: string; rank: number };
+  player: { id: string; xp: number; level: number; class: string; rank: number; attributes?: Record<string, number> | null };
   objective: { id: string; description: string } | null;
   ranking: { position: number } | null;
   settings?: { autoMissionGeneration: boolean; isPremium: boolean } | null;
@@ -79,7 +79,7 @@ export const Dashboard: React.FC = () => {
   const [playerRankLetter, setPlayerRankLetter] = useState<string>('E');
   const [playerRankingPosition, setPlayerRankingPosition] = useState<number | null>(null);
   const [playerId, setPlayerId] = useState<string | null>(null);
-  const [autoMissionGeneration, setAutoMissionGeneration] = useState<boolean>(true);
+  const [autoMissionGeneration, setAutoMissionGeneration] = useState<boolean>(false);
   const [ranking, setRanking] = useState<RankEntry[]>([]);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -93,6 +93,7 @@ export const Dashboard: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([
     { id: '1', sender: 'SYSTEM', text: 'O Oráculo está online. Solicite uma diretriz de missão ou análise de combate.', timestamp: new Date() }
   ]);
+  const [isOracleThinking, setIsOracleThinking] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -136,7 +137,7 @@ export const Dashboard: React.FC = () => {
         setPlayerRankLetter(rankLetterForLevel(me.player.level));
         setPlayerRankingPosition(me.ranking?.position ?? null);
         setPlayerId(me.player.id);
-        setAutoMissionGeneration(me.settings?.autoMissionGeneration ?? true);
+        setAutoMissionGeneration(me.settings?.autoMissionGeneration ?? false);
 
         // Processar stats do backend
         const backendAttributes = me.player.attributes as Record<string, number> | null;
@@ -319,12 +320,13 @@ export const Dashboard: React.FC = () => {
   };
 
   const handleSendMessage = async () => {
-    if (!chatInput.trim()) return;
+    if (!chatInput.trim() || isOracleThinking) return;
 
     const userMsg: ChatMessage = { id: Date.now().toString(), sender: 'USER', text: chatInput, timestamp: new Date() };
     setMessages(prev => [...prev, userMsg]);
     const messageToSend = chatInput;
     setChatInput('');
+    setIsOracleThinking(true);
 
     try {
       const resp = await fetch('/api/missions/request', {
@@ -388,6 +390,8 @@ export const Dashboard: React.FC = () => {
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, sysMsg]);
+    } finally {
+      setIsOracleThinking(false);
     }
   };
 
@@ -953,6 +957,22 @@ export const Dashboard: React.FC = () => {
             </div>
           </div>
         ))}
+        {/* Mensagem de loading enquanto o Oráculo processa */}
+        {isOracleThinking && (
+          <div className="flex justify-start">
+            <div className="max-w-[80%] p-4 border bg-black border-red-900/30 text-red-500">
+               <div className="flex items-center gap-2 mb-2 border-b border-dashed border-zinc-700/50 pb-1">
+                 <span className="text-[10px] font-mono uppercase opacity-70">ORÁCULO</span>
+                 <span className="text-[10px] font-mono opacity-50 animate-pulse">processando...</span>
+               </div>
+               <div className="flex items-center gap-1">
+                 <span className="inline-block w-2 h-2 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                 <span className="inline-block w-2 h-2 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                 <span className="inline-block w-2 h-2 bg-red-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+               </div>
+            </div>
+          </div>
+        )}
         <div ref={chatEndRef} />
       </div>
 
@@ -962,13 +982,15 @@ export const Dashboard: React.FC = () => {
             type="text" 
             value={chatInput}
             onChange={(e) => setChatInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-            placeholder="Solicite uma análise ou diretriz..."
-            className="flex-1 bg-black border border-zinc-800 p-3 text-zinc-300 font-mono text-sm focus:border-red-900 focus:outline-none transition-colors"
+            onKeyDown={(e) => e.key === 'Enter' && !isOracleThinking && handleSendMessage()}
+            placeholder={isOracleThinking ? "Oráculo processando..." : "Solicite uma análise ou diretriz..."}
+            disabled={isOracleThinking}
+            className="flex-1 bg-black border border-zinc-800 p-3 text-zinc-300 font-mono text-sm focus:border-red-900 focus:outline-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           />
           <button 
             onClick={handleSendMessage}
-            className="bg-zinc-900 border border-zinc-800 p-3 text-zinc-400 hover:text-red-500 hover:border-red-900 transition-all"
+            disabled={isOracleThinking}
+            className="bg-zinc-900 border border-zinc-800 p-3 text-zinc-400 hover:text-red-500 hover:border-red-900 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-zinc-400 disabled:hover:border-zinc-800"
           >
             <Send size={20} />
           </button>
@@ -1003,13 +1025,17 @@ export const Dashboard: React.FC = () => {
           </div>
 
           <div className="space-y-2">
-            <label className="text-xs font-mono text-zinc-500 uppercase">Objetivo Atual</label>
-            <input 
-              type="text" 
+            <label className="text-xs font-mono text-zinc-500 uppercase">Objetivo Principal</label>
+            <textarea 
               value={playerTitle}
               onChange={(e) => setPlayerTitle(e.target.value)}
-              className="w-full bg-zinc-900/30 border-b border-zinc-700 p-3 text-zinc-400 focus:border-red-600 focus:bg-zinc-900/50 outline-none transition-all font-mono"
+              placeholder="Defina seu objetivo principal..."
+              rows={3}
+              className="w-full bg-zinc-900/30 border border-zinc-700 p-3 text-zinc-300 focus:border-red-600 focus:bg-zinc-900/50 outline-none transition-all font-mono text-sm resize-none"
             />
+            <p className="text-[10px] font-mono text-zinc-600">
+              Seu objetivo guia a geração de missões personalizadas pelo Oráculo.
+            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-6 pt-4">
@@ -1041,7 +1067,11 @@ export const Dashboard: React.FC = () => {
                   const resp = await fetch('/api/dashboard/profile', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name: playerName }),
+                    body: JSON.stringify({ 
+                      name: playerName,
+                      objective: playerTitle,
+                      playerId: playerId,
+                    }),
                   });
                   if (!resp.ok) {
                     console.error('Falha ao salvar perfil:', await resp.text());
