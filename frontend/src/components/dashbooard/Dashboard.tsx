@@ -4,6 +4,7 @@ import {
   User, AlertTriangle, Check, Trophy, MessageSquare, 
   Activity, Settings, Send, Lock, Cpu, Share2, Menu, X
 } from 'lucide-react';
+import { signOut, useSession } from 'next-auth/react';
 
 // --- DATA CONSTANTS ---
 const INITIAL_STATS: PlayerStat[] = [
@@ -21,17 +22,37 @@ const INITIAL_QUESTS: Quest[] = [
   { id: 4, title: 'CORRIDA', current: 5, total: 10, unit: 'km', completed: false },
 ];
 
-const MOCK_RANKING: RankEntry[] = [
-  { rank: 1, name: 'SUNG JIN-WOO', level: 146, job: 'MONARCA DAS SOMBRAS' },
-  { rank: 2, name: 'THOMAS ANDRE', level: 130, job: 'GOLIATH' },
-  { rank: 3, name: 'LIU ZHIGANG', level: 128, job: 'HERÓI DA CHINA' },
-  { rank: 4, name: 'GOTO RYUJI', level: 115, job: 'ESPADACHIM' },
-  { rank: 5, name: 'CHA HAE-IN', level: 112, job: 'MESTRE DA ESPADA' },
-  { rank: 9999, name: 'OUTCAST', level: 1, job: 'NENHUMA', isUser: true },
-];
+type BackendMeResponse = {
+  user: { id: string; authUserId: string; name: string; age: number };
+  player: { id: string; xp: number; level: number; class: string; rank: number };
+  objective: { id: string; description: string } | null;
+  ranking: { position: number } | null;
+};
+
+type BackendRankingResponse = {
+  ranking: Array<{
+    position: number;
+    playerId: string;
+    name: string;
+    level: number;
+    xp: number;
+    class: string;
+  }>;
+};
+
+function rankLetterForLevel(level: number) {
+  // Ajuste quando você tiver uma regra oficial. Por enquanto, mantém a estética.
+  if (level >= 20) return 'S';
+  if (level >= 15) return 'A';
+  if (level >= 10) return 'B';
+  if (level >= 5) return 'C';
+  if (level >= 2) return 'D';
+  return 'E';
+}
 
 // --- MAIN COMPONENT ---
 export const Dashboard: React.FC = () => {
+  const { status, data: session } = useSession();
   const [activeTab, setActiveTab] = useState<'STATUS' | 'RANKING' | 'ORACLE' | 'PROFILE'>('STATUS');
   const [quests, setQuests] = useState<Quest[]>(INITIAL_QUESTS);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -39,6 +60,13 @@ export const Dashboard: React.FC = () => {
   // Profile State
   const [playerName, setPlayerName] = useState('OUTCAST');
   const [playerTitle, setPlayerTitle] = useState('Matador de Lobos');
+  const [playerLevel, setPlayerLevel] = useState<number>(1);
+  const [playerClass, setPlayerClass] = useState<string>('NENHUMA');
+  const [playerRankLetter, setPlayerRankLetter] = useState<string>('E');
+  const [playerRankingPosition, setPlayerRankingPosition] = useState<number | null>(null);
+  const [ranking, setRanking] = useState<RankEntry[]>([]);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Chat State
   const [chatInput, setChatInput] = useState('');
@@ -50,6 +78,57 @@ export const Dashboard: React.FC = () => {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, activeTab]);
+
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+
+    let cancelled = false;
+
+    const load = async () => {
+      try {
+        setLoadError(null);
+        const meResp = await fetch('/api/dashboard/me', { cache: 'no-store' });
+        if (!meResp.ok) {
+          throw new Error(await meResp.text());
+        }
+        const me = (await meResp.json()) as BackendMeResponse;
+        if (cancelled) return;
+
+        setPlayerName(me.user.name);
+        setPlayerTitle(me.objective?.description ?? 'Sem objetivo definido');
+        setPlayerLevel(me.player.level);
+        setPlayerClass(me.player.class);
+        setPlayerRankLetter(rankLetterForLevel(me.player.level));
+        setPlayerRankingPosition(me.ranking?.position ?? null);
+
+        const rankResp = await fetch('/api/dashboard/ranking?limit=50', { cache: 'no-store' });
+        if (!rankResp.ok) {
+          throw new Error(await rankResp.text());
+        }
+        const data = (await rankResp.json()) as BackendRankingResponse;
+        if (cancelled) return;
+
+        const myPlayerId = me.player.id;
+        setRanking(
+          data.ranking.map((r) => ({
+            rank: r.position,
+            name: r.name,
+            level: r.level,
+            job: r.class,
+            isUser: r.playerId === myPlayerId,
+          })),
+        );
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        if (!cancelled) setLoadError(msg);
+      }
+    };
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [status]);
 
   useEffect(() => {
     if (!isMobileMenuOpen) return;
@@ -186,7 +265,9 @@ export const Dashboard: React.FC = () => {
       <div className="border border-zinc-800 p-5 sm:p-6 space-y-6 bg-black relative overflow-hidden">
           <div className="absolute top-4 right-6 flex flex-col items-center pointer-events-none opacity-90">
             <span className="text-[10px] text-zinc-600 font-mono mb-[-5px]">RANK</span>
-            <span className="text-5xl sm:text-6xl font-black text-red-900 drop-shadow-[0_0_10px_rgba(127,29,29,0.5)]">E</span>
+            <span className="text-5xl sm:text-6xl font-black text-red-900 drop-shadow-[0_0_10px_rgba(127,29,29,0.5)]">
+              {playerRankLetter}
+            </span>
           </div>
 
           <div className="space-y-1 relative z-10">
@@ -197,11 +278,11 @@ export const Dashboard: React.FC = () => {
           <div className="grid grid-cols-2 gap-4 relative z-10">
             <div className="space-y-1">
               <span className="text-[10px] text-zinc-600 font-mono block">NÍVEL</span>
-              <span className="text-xl text-zinc-300 font-mono">1</span>
+              <span className="text-xl text-zinc-300 font-mono">{playerLevel}</span>
             </div>
             <div className="space-y-1">
               <span className="text-[10px] text-zinc-600 font-mono block">CLASSE</span>
-              <span className="text-xl text-zinc-500 font-mono">NENHUMA</span>
+              <span className="text-xl text-zinc-500 font-mono">{playerClass}</span>
             </div>
           </div>
 
@@ -327,15 +408,17 @@ export const Dashboard: React.FC = () => {
             <div className="relative z-10 grid grid-cols-3 gap-4 border-t border-zinc-900 pt-4 mt-4">
                <div>
                   <span className="block text-[8px] font-mono text-zinc-600 uppercase">Nível</span>
-                  <span className="text-xl font-mono text-zinc-300">01</span>
+                  <span className="text-xl font-mono text-zinc-300">
+                    {String(playerLevel).padStart(2, '0')}
+                  </span>
                </div>
                <div>
                   <span className="block text-[8px] font-mono text-zinc-600 uppercase">Classe</span>
-                  <span className="text-xl font-mono text-zinc-500">NONE</span>
+                  <span className="text-xl font-mono text-zinc-500">{playerClass}</span>
                </div>
                <div>
                   <span className="block text-[8px] font-mono text-zinc-600 uppercase">Rank</span>
-                  <span className="text-xl font-mono text-red-600">E</span>
+                  <span className="text-xl font-mono text-red-600">{playerRankLetter}</span>
                </div>
             </div>
 
@@ -375,7 +458,7 @@ export const Dashboard: React.FC = () => {
           <div className="col-span-2">Class</div>
         </div>
         
-        {MOCK_RANKING.map((entry) => (
+        {ranking.map((entry) => (
           <div 
             key={entry.rank} 
             className={`grid grid-cols-12 gap-4 p-4 border-b border-zinc-900 items-center ${
@@ -384,7 +467,7 @@ export const Dashboard: React.FC = () => {
           >
             <div className="col-span-2 font-bold font-mono text-lg">
               {entry.rank === 1 ? <span className="text-yellow-500">#1</span> : 
-               entry.isUser ? <span className="text-red-600">ERROR</span> : 
+               entry.isUser ? <span className="text-red-600">#{entry.rank}</span> : 
                <span className="text-zinc-600">#{entry.rank}</span>}
             </div>
             <div className="col-span-6">
@@ -463,6 +546,12 @@ export const Dashboard: React.FC = () => {
        </div>
 
        <div className="space-y-6 border border-zinc-800 p-8 bg-black">
+          {loadError ? (
+            <div className="border border-red-900/40 bg-red-950/20 p-3 text-sm text-red-400 font-mono">
+              Falha ao carregar dados do backend.
+            </div>
+          ) : null}
+
           <div className="space-y-2">
             <label className="text-xs font-mono text-zinc-500 uppercase">Designação (Nome)</label>
             <input 
@@ -489,7 +578,7 @@ export const Dashboard: React.FC = () => {
                   <Lock size={10} /> Classe
                 </label>
                 <div className="w-full border-b border-zinc-800 p-3 text-zinc-700 font-mono uppercase">
-                  Nenhuma
+                  {playerClass}
                 </div>
              </div>
              <div className="space-y-2 opacity-50 cursor-not-allowed">
@@ -497,16 +586,53 @@ export const Dashboard: React.FC = () => {
                   <Lock size={10} /> Rank
                 </label>
                 <div className="w-full border-b border-zinc-800 p-3 text-red-900/50 font-bold font-mono uppercase">
-                  E-Rank
+                  {playerRankLetter}-Rank
                 </div>
              </div>
           </div>
           
           <div className="pt-8">
-            <button className="w-full py-4 bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:border-red-600 hover:bg-red-950/20 transition-all font-bold tracking-widest uppercase text-sm">
-              Salvar Alterações
+            <button
+              type="button"
+              onClick={async () => {
+                if (status !== 'authenticated' || !session?.user?.id) return;
+                setIsSavingProfile(true);
+                try {
+                  const resp = await fetch('/api/dashboard/profile', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: playerName }),
+                  });
+                  if (!resp.ok) {
+                    console.error('Falha ao salvar perfil:', await resp.text());
+                    return;
+                  }
+
+                  // Recarrega "me" para refletir o backend
+                  const meResp = await fetch('/api/dashboard/me', { cache: 'no-store' });
+                  if (meResp.ok) {
+                    const me = (await meResp.json()) as BackendMeResponse;
+                    setPlayerName(me.user.name);
+                    setPlayerTitle(me.objective?.description ?? 'Sem objetivo definido');
+                    setPlayerLevel(me.player.level);
+                    setPlayerClass(me.player.class);
+                    setPlayerRankLetter(rankLetterForLevel(me.player.level));
+                    setPlayerRankingPosition(me.ranking?.position ?? null);
+                  }
+                } finally {
+                  setIsSavingProfile(false);
+                }
+              }}
+              disabled={isSavingProfile}
+              className="w-full py-4 bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:border-red-600 hover:bg-red-950/20 transition-all font-bold tracking-widest uppercase text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {isSavingProfile ? 'Salvando...' : 'Salvar Alterações'}
             </button>
-            <button className="w-full mt-4 py-4 bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:border-red-600 hover:bg-red-950/20 transition-all font-bold tracking-widest uppercase text-sm">
+            <button
+              type="button"
+              onClick={() => signOut({ callbackUrl: '/' })}
+              className="w-full mt-4 py-4 bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white hover:border-red-600 hover:bg-red-950/20 transition-all font-bold tracking-widest uppercase text-sm"
+            >
               Logout
             </button>
           </div>
