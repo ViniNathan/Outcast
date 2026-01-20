@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { PlayerStat, Mission, ChatMessage, RankEntry } from '@/types/dashboard';
 import { 
   User, AlertTriangle, Check, Trophy, MessageSquare, 
@@ -13,6 +13,19 @@ const DEFAULT_STATS: PlayerStat[] = [
   { label: 'SENTIDOS', value: 10, code: 'SEN' },
   { label: 'VITALIDADE', value: 10, code: 'VIT' },
   { label: 'INTELIG', value: 10, code: 'INT' },
+];
+
+// Mensagens de loading enquanto gera missões
+const GENERATION_MESSAGES = [
+  'INICIANDO PROTOCOLO DE GERAÇÃO...',
+  'ANALISANDO PERFIL DO RECEPTÁCULO...',
+  'CONSULTANDO O ARQUITETO...',
+  'CALCULANDO DIFICULDADE APROPRIADA...',
+  'AVALIANDO HISTÓRICO DE DESEMPENHO...',
+  'PROCESSANDO DADOS DE ATRIBUTOS...',
+  'GERANDO MISSÕES PERSONALIZADAS...',
+  'CALIBRANDO RECOMPENSAS E PENALIDADES...',
+  'FINALIZANDO PROTOCOLO...',
 ];
 
 type BackendMeResponse = {
@@ -72,6 +85,8 @@ export const Dashboard: React.FC = () => {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [playerStats, setPlayerStats] = useState<PlayerStat[]>(DEFAULT_STATS);
   const [selectedMission, setSelectedMission] = useState<Mission | null>(null);
+  const [isGeneratingMissions, setIsGeneratingMissions] = useState(false);
+  const [generationMessage, setGenerationMessage] = useState('');
 
   // Chat State
   const [chatInput, setChatInput] = useState('');
@@ -83,6 +98,21 @@ export const Dashboard: React.FC = () => {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, activeTab]);
+
+  // Efeito para ciclar mensagens de geração
+  useEffect(() => {
+    if (!isGeneratingMissions) return;
+
+    let messageIndex = 0;
+    setGenerationMessage(GENERATION_MESSAGES[0]);
+
+    const interval = setInterval(() => {
+      messageIndex = (messageIndex + 1) % GENERATION_MESSAGES.length;
+      setGenerationMessage(GENERATION_MESSAGES[messageIndex]);
+    }, 1500);
+
+    return () => clearInterval(interval);
+  }, [isGeneratingMissions]);
 
   useEffect(() => {
     if (status !== 'authenticated') return;
@@ -161,43 +191,42 @@ export const Dashboard: React.FC = () => {
   }, [status]);
 
   // Função para verificar e gerar missões automaticamente
-  const checkAndGenerateMissions = async () => {
+  const checkAndGenerateMissions = useCallback(async () => {
     if (status !== 'authenticated' || !autoMissionGeneration) return;
     
-    const pendingCount = missions.filter((m) => m.status === 'PENDING').length;
-    
-    // Se não houver missões pendentes, tentar gerar
-    if (pendingCount === 0) {
-      try {
-        const resp = await fetch('/api/missions/auto-generate', { method: 'POST' });
-        if (resp.ok) {
-          // Recarregar missões
-          const missionsResp = await fetch('/api/missions?limit=100', { cache: 'no-store' });
-          if (missionsResp.ok) {
-            const m = (await missionsResp.json()) as BackendMissionsResponse;
-            setMissions(m.missions ?? []);
-          }
+    try {
+      setIsGeneratingMissions(true);
+      const resp = await fetch('/api/missions/auto-generate', { method: 'POST' });
+      if (resp.ok) {
+        // Recarregar missões
+        const missionsResp = await fetch('/api/missions?limit=100', { cache: 'no-store' });
+        if (missionsResp.ok) {
+          const m = (await missionsResp.json()) as BackendMissionsResponse;
+          setMissions(m.missions ?? []);
         }
-      } catch (error) {
-        console.error('Erro ao gerar missões automaticamente:', error);
       }
+    } catch (error) {
+      console.error('Erro ao gerar missões automaticamente:', error);
+    } finally {
+      setIsGeneratingMissions(false);
     }
-  };
+  }, [status, autoMissionGeneration]);
 
-  // Verifica se precisa gerar missões quando as missões mudam
+  // Verifica se precisa gerar missões quando as missões mudam ou após carregamento inicial
   useEffect(() => {
-    if (status !== 'authenticated' || !autoMissionGeneration) return;
+    if (status !== 'authenticated' || !autoMissionGeneration || isLoadingData) return;
     
     const pendingCount = missions.filter((m) => m.status === 'PENDING').length;
-    if (pendingCount === 0 && missions.length > 0) {
-      // Se não há missões pendentes mas há missões (significa que todas foram completadas/falharam)
+    
+    // Gera missões se não há pendentes (tanto para usuários novos quanto após completar todas)
+    if (pendingCount === 0) {
       const timer = setTimeout(() => {
         void checkAndGenerateMissions();
       }, 1000); // Delay de 1s para evitar múltiplas chamadas
       
       return () => clearTimeout(timer);
     }
-  }, [missions, status, autoMissionGeneration]);
+  }, [missions, status, autoMissionGeneration, isLoadingData, checkAndGenerateMissions]);
 
   useEffect(() => {
     if (!isMobileMenuOpen) return;
@@ -558,6 +587,42 @@ export const Dashboard: React.FC = () => {
     const pendingCount = missions.filter((m) => m.status === 'PENDING').length;
     const missionLog = (
       <div className="border border-zinc-800 relative overflow-hidden bg-black">
+        {/* Overlay de geração de missões */}
+        {isGeneratingMissions && (
+          <div className="absolute inset-0 z-20 bg-black/95 flex flex-col items-center justify-center gap-6 backdrop-blur-sm">
+            {/* Animação de loading */}
+            <div className="relative">
+              <div className="w-16 h-16 border-2 border-red-900/30 border-t-red-600 rounded-full animate-spin" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Cpu size={24} className="text-red-600 animate-pulse" />
+              </div>
+            </div>
+            
+            {/* Mensagem atual */}
+            <div className="text-center px-4 max-w-md">
+              <div className="text-[10px] font-mono text-zinc-600 uppercase tracking-[0.3em] mb-2">
+                SISTEMA EM OPERAÇÃO
+              </div>
+              <div className="text-sm font-mono text-red-500 animate-pulse min-h-[1.5rem]">
+                {generationMessage}
+              </div>
+            </div>
+            
+            {/* Barra de progresso indeterminada */}
+            <div className="w-48 h-1 bg-zinc-900 overflow-hidden">
+              <div 
+                className="h-full bg-red-600 w-1/3"
+                style={{ animation: 'shimmer 1.5s ease-in-out infinite' }}
+              />
+            </div>
+            
+            {/* Texto secundário */}
+            <div className="text-[10px] font-mono text-zinc-700 uppercase tracking-widest">
+              O Arquiteto está deliberando...
+            </div>
+          </div>
+        )}
+
         <div className="bg-zinc-900/50 p-3 sm:p-4 border-b border-zinc-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
             <span className="text-red-600 font-bold text-sm tracking-widest flex items-center gap-2 flex-wrap">
               <AlertTriangle size={16} /> LOG DE MISSÕES

@@ -45,6 +45,16 @@ body {
   }
 }
 
+/* Shimmer animation for loading states */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(400%);
+  }
+}
+
 /* Hide the native cursor only on devices that actually have a mouse/trackpad */
 @media (hover: hover) and (pointer: fine) {
   html,
