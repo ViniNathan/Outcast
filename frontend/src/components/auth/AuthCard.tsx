@@ -3,6 +3,7 @@
 import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { ChevronLeft } from "lucide-react";
 
 type Mode = "login" | "register";
 
@@ -72,7 +73,14 @@ export function AuthCard({
   };
 
   return (
-    <div className="flex min-h-[calc(100vh-0px)] flex-col items-center justify-center bg-black px-4">
+    <div className="relative flex min-h-[calc(100vh-0px)] flex-col items-center justify-center bg-black px-4">
+      <Link
+        href="/"
+        className="absolute left-3 top-3 text-zinc-500 transition-colors hover:text-red-500"
+      >
+        <ChevronLeft className="h-12 w-12" />
+      </Link>
+
       <div className="w-full max-w-md border border-zinc-900 bg-black/95 p-8 relative overflow-hidden">
         {/* Decorative elements */}
         <div className="absolute top-0 left-0 w-1 h-16 bg-red-900/80"></div>
