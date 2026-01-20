@@ -55,6 +55,9 @@ export const Dashboard: React.FC = () => {
   const [missions, setMissions] = useState<Mission[]>([]);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
+  // Loading State
+  const [isLoadingData, setIsLoadingData] = useState(true);
+  
   // Profile State
   const [playerName, setPlayerName] = useState('OUTCAST');
   const [playerTitle, setPlayerTitle] = useState('Matador de Lobos');
@@ -131,6 +134,8 @@ export const Dashboard: React.FC = () => {
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         if (!cancelled) setLoadError(msg);
+      } finally {
+        if (!cancelled) setIsLoadingData(false);
       }
     };
 
@@ -290,8 +295,11 @@ export const Dashboard: React.FC = () => {
   };
 
   const handleToggleAutoMissions = async () => {
+    const next = !autoMissionGeneration;
+    // Optimistic update
+    setAutoMissionGeneration(next);
+
     try {
-      const next = !autoMissionGeneration;
       const resp = await fetch('/api/player/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -299,6 +307,9 @@ export const Dashboard: React.FC = () => {
       });
       const text = await resp.text();
       if (!resp.ok) {
+        // Revert update
+        setAutoMissionGeneration(!next);
+        
         let detail = 'FALHA AO ATUALIZAR CONFIGURAÇÃO.';
         try {
           const parsed = JSON.parse(text) as { error?: string; details?: unknown };
@@ -310,8 +321,10 @@ export const Dashboard: React.FC = () => {
         setMessages(prev => [...prev, { id: Date.now().toString(), sender: 'SYSTEM', text: detail, timestamp: new Date() }]);
         return;
       }
-      setAutoMissionGeneration(next);
+      // Success - state already updated optimistically
     } catch {
+      // Revert update
+      setAutoMissionGeneration(!next);
       setMessages(prev => [...prev, { id: Date.now().toString(), sender: 'SYSTEM', text: 'FALHA DE COMUNICAÇÃO.', timestamp: new Date() }]);
     }
   };
@@ -337,23 +350,21 @@ export const Dashboard: React.FC = () => {
             O sistema emite tarefas mensuráveis. Conclua e receba XP. Falhe e aceite a penalidade.
           </p>
 
-          {pendingCount === 0 ? (
-            <div className="mb-6 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between border border-zinc-900 bg-zinc-950/30 p-4">
-              <div className="text-xs font-mono text-zinc-500 uppercase tracking-widest">
-                Geração automática
-                <span className={autoMissionGeneration ? "text-green-700 ml-2" : "text-red-700 ml-2"}>
-                  {autoMissionGeneration ? "ON" : "OFF"}
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => void handleToggleAutoMissions()}
-                className="px-4 py-2 border border-zinc-800 bg-black text-zinc-400 hover:text-red-500 hover:border-red-900 transition-colors text-xs font-mono uppercase tracking-widest"
-              >
-                Alternar
-              </button>
+          <div className="mb-6 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between border border-zinc-900 bg-zinc-950/30 p-4">
+            <div className="text-xs font-mono text-zinc-500 uppercase tracking-widest">
+              Geração automática
+              <span className={autoMissionGeneration ? "text-green-700 ml-2" : "text-red-700 ml-2"}>
+                {autoMissionGeneration ? "ON" : "OFF"}
+              </span>
             </div>
-          ) : null}
+            <button
+              type="button"
+              onClick={() => void handleToggleAutoMissions()}
+              className="px-4 py-2 border border-zinc-800 bg-black text-zinc-400 hover:text-red-500 hover:border-red-900 transition-colors text-xs font-mono uppercase tracking-widest"
+            >
+              Alternar
+            </button>
+          </div>
 
           <div className="space-y-6 max-h-[200px] overflow-y-auto custom-scrollbar pr-2">
             {missions.map((mission) => {
@@ -801,6 +812,22 @@ export const Dashboard: React.FC = () => {
        </div>
     </div>
   );
+
+  if (status === 'loading' || isLoadingData) {
+    return (
+      <div className="w-full h-screen flex flex-col items-center justify-center bg-black gap-4">
+        <div className="text-red-600 font-mono tracking-[0.5em] text-xl animate-pulse font-bold">
+          INITIALIZING SYSTEM...
+        </div>
+        <div className="w-64 h-1 bg-zinc-900 overflow-hidden">
+          <div className="h-full bg-red-600 animate-pulse w-full"></div>
+        </div>
+        <div className="text-zinc-600 font-mono text-xs uppercase">
+          Carregando dados do receptáculo
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-7xl mx-auto px-4 md:px-6 py-10 md:py-16">
