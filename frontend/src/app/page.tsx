@@ -130,11 +130,6 @@ const App: React.FC = () => {
           <Dashboard />
         )}
       </main>
-
-      {/* Decorative corners */}
-      <div className="fixed bottom-0 left-0 p-4 z-50 pointer-events-none text-[10px] text-zinc-800">
-        ID: {systemState === 'DASHBOARD' ? 'JOGADOR_01' : 'DESCONHECIDO'}
-      </div>
     </div>
   );
 };
