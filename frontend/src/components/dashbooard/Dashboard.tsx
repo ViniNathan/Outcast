@@ -1244,7 +1244,7 @@ export const Dashboard: React.FC = () => {
     return (
       <div className="w-full h-screen flex flex-col items-center justify-center bg-black gap-4">
         <div className="text-red-600 font-mono tracking-[0.5em] text-xl animate-pulse font-bold">
-          INITIALIZING SYSTEM...
+          INITIALIZING SYSTEM
         </div>
         <div className="w-64 h-1 bg-zinc-900 overflow-hidden">
           <div className="h-full bg-red-600 animate-pulse w-full"></div>
