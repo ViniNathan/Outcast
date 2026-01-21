@@ -28,11 +28,11 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose, onU
             <div className="flex items-center gap-3 mb-4">
               <Crown size={32} className="text-red-500" />
               <h2 className="text-3xl font-bold text-red-500 uppercase tracking-tight">
-                RANK S BLOQUEADO
+                ACESSO NEGADO
               </h2>
             </div>
             <p className="text-zinc-400 font-mono text-sm">
-              Você precisa do acesso premium para desbloquear este recurso.
+              Você ainda não provou que merece o Rank S. Continue sendo um NPC ou evolua.
             </p>
           </div>
         </div>
@@ -42,7 +42,7 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose, onU
           {/* Benefícios */}
           <div>
             <div className="text-xs font-mono text-zinc-600 uppercase mb-4 tracking-widest">
-              Desbloqueie o Potencial Completo
+              O QUE VOCÊ PERDE ENQUANTO FICA NO RANK E
             </div>
             
             <ul className="space-y-4">
@@ -53,7 +53,7 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose, onU
                     Oráculo IA Ilimitado
                   </h4>
                   <p className="text-zinc-500 text-xs">
-                    Converse com a IA para gerar missões personalizadas, obter análises e diretrizes estratégicas ilimitadas.
+                    O treinador que analisa suas falhas, cria missões personalizadas e <span className="text-red-500">humilha suas desculpas</span>. Sem limites.
                   </p>
                 </div>
               </li>
@@ -65,7 +65,7 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose, onU
                     Ranking & Guilds Globais
                   </h4>
                   <p className="text-zinc-500 text-xs">
-                    Compare seu progresso com outros jogadores, suba no ranking global e prove que não é um NPC.
+                    Veja sua posição real entre os outros. <span className="text-red-500">Prove que você não é um NPC</span> e domine o ranking global.
                   </p>
                 </div>
               </li>
@@ -77,7 +77,7 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose, onU
                     Auto Geração de Missões
                   </h4>
                   <p className="text-zinc-500 text-xs">
-                    O sistema gera automaticamente novas missões quando você completa todas. Nunca fique sem objetivos.
+                    O sistema nunca te deixa descansar. <span className="text-red-500">Novas missões geradas automaticamente</span> quando você completa todas. Sem desculpas.
                   </p>
                 </div>
               </li>
@@ -92,7 +92,7 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose, onU
               <span className="text-lg text-red-400/70">/mês</span>
             </div>
             <p className="text-center text-xs text-zinc-500 font-mono">
-              Cancele quando quiser. Sem taxas ocultas.
+              Investimento mínimo para dominar o sistema. Cancele quando desistir.
             </p>
           </div>
 
@@ -104,7 +104,7 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose, onU
             >
               <span className="relative z-10 flex items-center justify-center gap-2">
                 <Crown size={20} />
-                Fazer Upgrade para Rank S
+                DOMINAR O SISTEMA
               </span>
               <div className="absolute inset-0 bg-white/20 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-500 ease-in-out skew-x-12" />
             </button>
@@ -113,14 +113,14 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose, onU
               onClick={onClose}
               className="w-full py-3 border border-zinc-800 text-zinc-500 hover:text-zinc-300 hover:border-zinc-700 transition-colors uppercase font-mono text-xs tracking-widest"
             >
-              Continuar como Rank E
+              Continuar sendo um NPC
             </button>
           </div>
 
           {/* Garantia */}
           <div className="text-center pt-4 border-t border-zinc-900">
             <p className="text-[10px] text-zinc-700 uppercase font-mono tracking-widest">
-              Processamento seguro via Stripe • Cancele a qualquer momento
+              Processamento seguro via Stripe • O sistema não aceita desculpas, mas aceita cancelamento
             </p>
           </div>
         </div>
