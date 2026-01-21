@@ -422,8 +422,8 @@ export const useTutorial = (
     {
       id: 'welcome',
       targetId: 'tutorial-welcome',
-      title: 'Bem-vindo ao Sistema',
-      description: 'Este tutorial vai guiá-lo pelos principais recursos do dashboard. O Sistema foi projetado para transformar seus objetivos em missões mensuráveis.',
+      title: 'VOCÊ ACORDOU O ORÁCULO',
+      description: 'Escute bem. O Oráculo não tolera falhas. Aprenda a usar as ferramentas agora ou será descartado como os outros.',
       position: 'center',
       requiredTab: 'STATUS',
     },
@@ -431,10 +431,10 @@ export const useTutorial = (
     {
       id: 'navigation',
       targetId: 'tutorial-nav',
-      title: 'Navegação',
+      title: 'INTERFACE DE COMANDO',
       description: isMobile 
-        ? 'Toque no botão de Menu para acessar as seções: Status, Ranking, Oráculo e Perfil.'
-        : 'Use o menu para acessar diferentes seções: Status (suas missões), Ranking (classificação global), Oráculo (chat de comandos) e Perfil (seus dados).',
+        ? 'Acesse os módulos vitais pelo Menu. Status, Ranking, Oráculo e Perfil. Não se perca.'
+        : 'Acesse os módulos vitais: Status (missões), Ranking (hierarquia), Oráculo (inteligência) e Perfil (dados).',
       position: 'bottom',
       requiredTab: 'STATUS',
     },
@@ -442,8 +442,8 @@ export const useTutorial = (
     {
       id: 'missions',
       targetId: isMobile ? 'tutorial-missions-mobile' : 'tutorial-missions-desktop',
-      title: 'Log de Missões',
-      description: 'Aqui você verá suas missões ativas. Cada missão tem prazo, recompensa de XP e penalidade por falha. Toque em uma missão para ver detalhes.',
+      title: 'REGISTRO DE OPERAÇÕES',
+      description: 'Suas diretrizes ativas. Cumpra os prazos ou sofra as penalidades. O fracasso é inaceitável.',
       position: 'bottom', // Sempre bottom pois o elemento está no topo da página
       requiredTab: 'STATUS',
     },
@@ -451,8 +451,8 @@ export const useTutorial = (
     {
       id: 'auto-generate',
       targetId: 'tutorial-auto-generate', // Busca por classe
-      title: 'Geração Automática',
-      description: 'Ative esta opção para que o Sistema gere missões automaticamente baseadas nos seus objetivos.',
+      title: 'PROTOCOLO AUTOMÁTICO',
+      description: 'Deixe o Sistema ditar seu destino. Ative para receber missões automaticamente. Apenas obedeça.',
       position: 'bottom',
       requiredTab: 'STATUS',
     },
@@ -460,10 +460,10 @@ export const useTutorial = (
     {
       id: 'identity',
       targetId: isMobile ? 'tutorial-status-drawer-handle' : 'tutorial-identity',
-      title: isMobile ? 'Drawer de Status' : 'Seu Status',
+      title: isMobile ? 'DADOS VITAIS' : 'PARÂMETROS DO OPERADOR',
       description: isMobile 
-        ? 'Deslize para cima nesta barra para ver seu status completo: nome, nível, classe e atributos.'
-        : 'Seu perfil de caçador: nome, nível, classe e rank. Seu rank evolui conforme você completa missões.',
+        ? 'Acesse seus dados de combate: nome, nível, classe e atributos. Evolua ou morra na obscuridade.'
+        : 'Seus dados de combate: nome, nível, classe e rank. Prove seu valor para subir na hierarquia.',
       position: isMobile ? 'top' : 'bottom', // bottom em desktop pois o card está no topo
       requiredTab: 'STATUS',
     },
@@ -471,8 +471,8 @@ export const useTutorial = (
     ...(!isMobile ? [{
       id: 'stats',
       targetId: 'tutorial-stats',
-      title: 'Atributos',
-      description: 'Seus atributos (FOR, AGI, SEN, VIT, INT) evoluem ao completar missões específicas. Cada missão pode recompensar pontos de atributo.',
+      title: 'ESPECIFICAÇÕES DE COMBATE',
+      description: 'Melhore sua carcaça. FOR, AGI, SEN, VIT, INT. Cada ponto conta na sua sobrevivência.',
       position: 'bottom' as const, // bottom pois está abaixo do log
       requiredTab: 'STATUS' as const,
     }] : []),
@@ -480,8 +480,8 @@ export const useTutorial = (
     {
       id: 'ranking',
       targetId: 'tutorial-ranking-content',
-      title: 'Classificação Global',
-      description: 'Veja sua posição entre todos os caçadores. Suba de rank completando missões e ganhando XP.',
+      title: 'CADEIA ALIMENTAR',
+      description: 'Veja quem está no topo. Derrube-os para tomar seu lugar na hierarquia global.',
       position: 'bottom', // bottom pois conteúdo está no topo
       requiredTab: 'RANKING',
     },
@@ -489,8 +489,8 @@ export const useTutorial = (
     {
       id: 'oracle',
       targetId: 'tutorial-oracle-content',
-      title: 'O Oráculo',
-      description: 'Converse com o Oráculo para solicitar missões personalizadas. Descreva o que deseja alcançar.',
+      title: 'NEXUS DE DADOS',
+      description: 'Acesso direto à inteligência central. Solicite missões específicas, se tiver coragem.',
       position: 'bottom', // bottom pois conteúdo está no topo
       requiredTab: 'ORACLE',
     },
@@ -498,8 +498,8 @@ export const useTutorial = (
     {
       id: 'profile',
       targetId: 'tutorial-profile-content',
-      title: 'Seu Perfil',
-      description: 'Edite seu nome e defina até 3 objetivos principais. Esses objetivos guiam a geração de missões.',
+      title: 'REGISTRO DO OPERADOR',
+      description: 'Seus objetivos moldam o Sistema. Defina o que busca, e o Sistema lhe dará o caminho.',
       position: 'bottom', // bottom pois conteúdo está no topo
       requiredTab: 'PROFILE',
     },
@@ -507,8 +507,8 @@ export const useTutorial = (
     {
       id: 'conclusion',
       targetId: 'tutorial-conclusion',
-      title: 'Pronto para Evoluir',
-      description: 'Tutorial completo! Defina seus objetivos no Perfil e comece a completar missões. O Sistema está observando.',
+      title: 'SINCRONIZAÇÃO CONCLUÍDA',
+      description: 'Você já sabe o suficiente. Execute suas ordens. O Sistema está observando cada movimento seu.',
       position: 'center',
       requiredTab: 'STATUS',
     },

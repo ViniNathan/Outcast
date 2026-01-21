@@ -7,6 +7,8 @@ import {
 import { signOut, useSession } from 'next-auth/react';
 import { TutorialOverlay, useTutorial } from './TutorialOverlay';
 import { UpgradeModal } from '@/components/UI/UpgradeModal';
+import Image from 'next/image';
+import logoImg from '@/assets/logo.jpeg';
 
 // --- DATA CONSTANTS ---
 const DEFAULT_STATS: PlayerStat[] = [
@@ -932,12 +934,19 @@ export const Dashboard: React.FC = () => {
         <div className="hidden lg:grid lg:grid-cols-12 gap-8">
           <div className="lg:col-span-4 space-y-6">
             <div className="border border-zinc-800 bg-zinc-900/10 p-1 relative aspect-square flex items-center justify-center overflow-hidden group">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-zinc-800/20 to-transparent opacity-50" />
-              <User size={64} className="text-zinc-800 group-hover:text-red-900/50 transition-colors duration-500" strokeWidth={1} />
-              <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-zinc-600" />
-              <div className="absolute top-0 right-0 w-2 h-2 border-t border-r border-zinc-600" />
-              <div className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-zinc-600" />
-              <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-zinc-600" />
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-zinc-800/20 to-transparent opacity-50 z-10 pointer-events-none" />
+              <div className="relative w-full h-full">
+                <Image 
+                  src={logoImg} 
+                  alt="Outcast Logo" 
+                  fill
+                  className="object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500 grayscale group-hover:grayscale-0"
+                />
+              </div>
+              <div className="absolute top-0 left-0 w-2 h-2 border-t border-l border-zinc-600 z-20" />
+              <div className="absolute top-0 right-0 w-2 h-2 border-t border-r border-zinc-600 z-20" />
+              <div className="absolute bottom-0 left-0 w-2 h-2 border-b border-l border-zinc-600 z-20" />
+              <div className="absolute bottom-0 right-0 w-2 h-2 border-b border-r border-zinc-600 z-20" />
             </div>
 
             {identityCard}
