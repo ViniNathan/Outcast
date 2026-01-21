@@ -213,7 +213,7 @@ async function ensurePlayerSettings(playerId: string) {
   return prisma.playerSettings.upsert({
     where: { playerId },
     update: {},
-    create: { playerId },
+    create: { playerId, autoMissionGeneration: false },
   });
 }
 
@@ -375,7 +375,7 @@ new Elysia()
         await prisma.playerSettings.upsert({
           where: { playerId: player.id },
           update: {},
-          create: { playerId: player.id },
+          create: { playerId: player.id, autoMissionGeneration: false },
         });
 
         // Evita duplicação: expira missões pendentes antigas ao definir novo objetivo.
