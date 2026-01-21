@@ -191,7 +191,7 @@ export const SystemInterface: React.FC<SystemInterfaceProps> = ({ onAwaken, isFi
                
                <ul className="space-y-4 mb-8 flex-1">
                  <li className="flex items-center gap-3 text-sm text-zinc-400">
-                   <Check size={14} className="text-zinc-500" /> Missões Diárias Manuais
+                   <Check size={14} className="text-zinc-500" /> Missões Iniciais
                  </li>
                  <li className="flex items-center gap-3 text-sm text-zinc-400">
                    <Check size={14} className="text-zinc-500" /> Status Básico
