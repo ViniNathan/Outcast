@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { UpgradeModal } from "@/components/UI/UpgradeModal";
 
 export function OnboardingScreen({ onComplete }: { onComplete: () => void }) {
   const [nome, setNome] = useState("");
@@ -8,6 +9,7 @@ export function OnboardingScreen({ onComplete }: { onComplete: () => void }) {
   const [objetivo, setObjetivo] = useState("");
   const [localError, setLocalError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const handleContinue = async () => {
     console.log("[ONBOARDING] Iniciando submissão...");
@@ -55,9 +57,10 @@ export function OnboardingScreen({ onComplete }: { onComplete: () => void }) {
         return;
       }
 
-      console.log("[ONBOARDING] ✅ Sucesso! Chamando onComplete...");
-      // Sucesso - chamar callback para prosseguir
-      onComplete();
+      console.log("[ONBOARDING] ✅ Sucesso! Mostrando modal de upgrade...");
+      // Sucesso - mostrar modal de upgrade antes de completar
+      setIsSubmitting(false);
+      setShowUpgradeModal(true);
     } catch (e) {
       const errorMsg = e instanceof Error ? e.message : String(e);
       console.log("[ONBOARDING] ❌ Exceção capturada:", errorMsg);
@@ -155,6 +158,33 @@ export function OnboardingScreen({ onComplete }: { onComplete: () => void }) {
           </p>
         </div>
       </div>
+
+      {/* Upgrade Modal */}
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => {
+          setShowUpgradeModal(false);
+          onComplete();
+        }}
+        onUpgrade={async () => {
+          try {
+            const response = await fetch('/api/stripe/create-checkout', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID,
+              }),
+            });
+
+            const data = await response.json();
+            if (data.url) {
+              window.location.href = data.url;
+            }
+          } catch (error) {
+            console.error('Erro ao criar checkout:', error);
+          }
+        }}
+      />
     </div>
   );
 }

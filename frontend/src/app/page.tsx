@@ -22,8 +22,22 @@ const App: React.FC = () => {
     if (status === 'loading') return;
 
     const next = searchParams.get('next');
+    const success = searchParams.get('success');
     const isFromGoogleCallback = next === 'dashboard';
+    const isFromStripeSuccess = success === 'true';
     const isAuthenticated = status === 'authenticated';
+
+    // Se veio do Stripe com sucesso e está autenticado, vai direto para o dashboard
+    if (isFromStripeSuccess && isAuthenticated) {
+      console.log('[PAGE] Retorno do Stripe com sucesso - indo para dashboard');
+      try {
+        window.localStorage.setItem('outcast_already_accessed', 'true');
+      } catch (e) {
+        console.error('Erro ao salvar no localStorage:', e);
+      }
+      setSystemState('DASHBOARD');
+      return;
+    }
 
     // Se veio do callback do Google e está autenticado, vai direto para verificar backend
     if (isFromGoogleCallback && isAuthenticated) {

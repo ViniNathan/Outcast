@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { signOut, useSession } from 'next-auth/react';
 import { TutorialOverlay, useTutorial } from './TutorialOverlay';
+import { UpgradeModal } from '@/components/UI/UpgradeModal';
 
 // --- DATA CONSTANTS ---
 const DEFAULT_STATS: PlayerStat[] = [
@@ -89,6 +90,8 @@ export const Dashboard: React.FC = () => {
   const [playerRankingPosition, setPlayerRankingPosition] = useState<number | null>(null);
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [autoMissionGeneration, setAutoMissionGeneration] = useState<boolean>(false);
+  const [isPremium, setIsPremium] = useState<boolean>(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [ranking, setRanking] = useState<RankEntry[]>([]);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -148,6 +151,7 @@ export const Dashboard: React.FC = () => {
         setPlayerRankingPosition(me.ranking?.position ?? null);
         setPlayerId(me.player.id);
         setAutoMissionGeneration(me.settings?.autoMissionGeneration ?? false);
+        setIsPremium(me.settings?.isPremium ?? false);
 
         // Processar stats do backend
         const backendAttributes = me.player.attributes as Record<string, number> | null;
@@ -336,12 +340,24 @@ export const Dashboard: React.FC = () => {
   };
 
   const handleSelectTab = (tab: 'STATUS' | 'RANKING' | 'ORACLE' | 'PROFILE') => {
+    // Bloquear Ranking e Oráculo para usuários free
+    if (!isPremium && (tab === 'RANKING' || tab === 'ORACLE')) {
+      setShowUpgradeModal(true);
+      setIsMobileMenuOpen(false);
+      return;
+    }
     setActiveTab(tab);
     setIsMobileMenuOpen(false);
   };
 
   const handleSendMessage = async () => {
     if (!chatInput.trim() || isOracleThinking) return;
+
+    // Bloquear para usuários free
+    if (!isPremium) {
+      setShowUpgradeModal(true);
+      return;
+    }
 
     const userMsg: ChatMessage = { id: Date.now().toString(), sender: 'USER', text: chatInput, timestamp: new Date() };
     setMessages(prev => [...prev, userMsg]);
@@ -417,6 +433,12 @@ export const Dashboard: React.FC = () => {
   };
 
   const handleToggleAutoMissions = async () => {
+    // Bloquear para usuários free
+    if (!isPremium) {
+      setShowUpgradeModal(true);
+      return;
+    }
+
     const next = !autoMissionGeneration;
     // Optimistic update
     setAutoMissionGeneration(next);
@@ -1499,6 +1521,30 @@ export const Dashboard: React.FC = () => {
       {/* Elemento invisível para passos centralizados */}
       <div id="tutorial-welcome" className="hidden" />
       <div id="tutorial-conclusion" className="hidden" />
+
+      {/* Upgrade Modal */}
+      <UpgradeModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        onUpgrade={async () => {
+          try {
+            const response = await fetch('/api/stripe/create-checkout', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID,
+              }),
+            });
+
+            const data = await response.json();
+            if (data.url) {
+              window.location.href = data.url;
+            }
+          } catch (error) {
+            console.error('Erro ao criar checkout:', error);
+          }
+        }}
+      />
 
     </div>
   );

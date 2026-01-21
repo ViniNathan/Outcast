@@ -29,6 +29,32 @@ export const SystemInterface: React.FC<SystemInterfaceProps> = ({ onAwaken, isFi
     router.push('/login');
   };
 
+  const handleUpgradeToPremium = async () => {
+    // Se não está logado, redirecionar para login
+    if (status !== 'authenticated') {
+      router.push('/login');
+      return;
+    }
+
+    // Criar checkout session
+    try {
+      const response = await fetch('/api/stripe/create-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID,
+        }),
+      });
+
+      const data = await response.json();
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (error) {
+      console.error('Erro ao criar checkout:', error);
+    }
+  };
+
   return (
     <div className={`w-full max-w-5xl mx-auto px-6 py-24 transition-opacity duration-1000 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
 
@@ -220,7 +246,7 @@ export const SystemInterface: React.FC<SystemInterfaceProps> = ({ onAwaken, isFi
                </ul>
 
                <button 
-                onClick={handleAccess}
+                onClick={handleUpgradeToPremium}
                 className="w-full py-4 bg-red-900 hover:bg-red-700 text-white transition-all uppercase font-mono text-xs tracking-widest font-bold relative overflow-hidden group"
                >
                  <span className="relative z-10">Dominar o Sistema</span>
