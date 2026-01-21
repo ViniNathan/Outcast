@@ -1242,14 +1242,14 @@ export const Dashboard: React.FC = () => {
 
   if (status === 'loading' || isLoadingData) {
     return (
-      <div className="w-full h-screen flex flex-col items-center justify-center bg-black gap-4">
-        <div className="text-red-600 font-mono tracking-[0.5em] text-xl animate-pulse font-bold">
+      <div className="w-full min-h-screen h-dvh flex flex-col items-center justify-center bg-black gap-4 px-4">
+        <div className="text-red-600 font-mono tracking-[0.5em] text-xl animate-pulse font-bold text-center">
           INITIALIZING SYSTEM
         </div>
-        <div className="w-64 h-1 bg-zinc-900 overflow-hidden">
+        <div className="w-64 max-w-full h-1 bg-zinc-900 overflow-hidden">
           <div className="h-full bg-red-600 animate-pulse w-full"></div>
         </div>
-        <div className="text-zinc-600 font-mono text-xs uppercase">
+        <div className="text-zinc-600 font-mono text-xs uppercase text-center">
           Carregando dados do receptáculo
         </div>
       </div>
