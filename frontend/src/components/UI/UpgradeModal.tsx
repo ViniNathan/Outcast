@@ -62,7 +62,7 @@ export const UpgradeModal: React.FC<UpgradeModalProps> = ({ isOpen, onClose, onU
                 <Trophy size={24} className="text-red-500 shrink-0 mt-1" />
                 <div>
                   <h4 className="text-zinc-200 font-bold text-sm uppercase tracking-wide mb-1">
-                    Ranking & Guilds Globais
+                    Ranking Global
                   </h4>
                   <p className="text-zinc-500 text-xs">
                     Veja sua posição real entre os outros. <span className="text-red-500">Prove que você não é um NPC</span> e domine o ranking global.
