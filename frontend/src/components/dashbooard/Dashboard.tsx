@@ -775,7 +775,14 @@ export const Dashboard: React.FC = () => {
 
           <div className="space-y-1 relative z-10">
             <span className="text-[10px] text-zinc-600 font-mono block">NOME</span>
-            <span className="text-xl sm:text-2xl text-zinc-200 font-bold tracking-wide break-words leading-tight">{playerName}</span>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xl sm:text-2xl text-zinc-200 font-bold tracking-wide break-words leading-tight">{playerName}</span>
+              {isPremium && (
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-500/10 text-purple-400 border border-purple-500/20 tracking-wider shadow-[0_0_8px_rgba(168,85,247,0.3)]">
+                  DESPERTO
+                </span>
+              )}
+            </div>
           </div>
           
           <div className="grid grid-cols-2 gap-4 relative z-10">
@@ -872,7 +879,14 @@ export const Dashboard: React.FC = () => {
                   <div className="flex justify-between items-start">
                     <div className="space-y-1 flex-1 min-w-0">
                       <span className="text-[10px] text-zinc-600 font-mono block">NOME</span>
-                      <span className="text-lg text-zinc-200 font-bold tracking-wide break-words leading-tight">{playerName}</span>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-lg text-zinc-200 font-bold tracking-wide break-words leading-tight">{playerName}</span>
+                        {isPremium && (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-500/10 text-purple-400 border border-purple-500/20 tracking-wider shadow-[0_0_8px_rgba(168,85,247,0.3)]">
+                            DESPERTO
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <div className="flex flex-col items-center ml-4">
                       <span className="text-[10px] text-zinc-600 font-mono">RANK</span>
@@ -987,7 +1001,14 @@ export const Dashboard: React.FC = () => {
                      <span className="w-2 h-2 bg-red-600 animate-pulse" />
                      <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-[0.2em]">System ID Card</span>
                   </div>
-                  <h3 className="text-2xl md:text-3xl font-black text-zinc-100 uppercase tracking-tighter">{playerName}</h3>
+                  <h3 className="text-2xl md:text-3xl font-black text-zinc-100 uppercase tracking-tighter flex items-center gap-3">
+                    {playerName}
+                    {isPremium && (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-500/10 text-purple-400 border border-purple-500/20 tracking-wider shadow-[0_0_8px_rgba(168,85,247,0.3)] align-middle">
+                        DESPERTO
+                      </span>
+                    )}
+                  </h3>
                   <p className="text-xs font-mono text-red-500 uppercase tracking-wider mt-1">{playerTitle}</p>
                </div>
                <div className="text-right">
