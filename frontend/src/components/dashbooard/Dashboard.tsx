@@ -2,9 +2,10 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { PlayerStat, Mission, ChatMessage, RankEntry } from '@/types/dashboard';
 import { 
   User, AlertTriangle, Check, Trophy, MessageSquare, 
-  Activity, Settings, Send, Lock, Cpu, Share2, Menu, X, ChevronUp, ChevronDown
+  Activity, Settings, Send, Lock, Cpu, Share2, Menu, X, ChevronUp, ChevronDown, HelpCircle
 } from 'lucide-react';
 import { signOut, useSession } from 'next-auth/react';
+import { TutorialOverlay, useTutorial } from './TutorialOverlay';
 
 // --- DATA CONSTANTS ---
 const DEFAULT_STATS: PlayerStat[] = [
@@ -67,6 +68,14 @@ export const Dashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'STATUS' | 'RANKING' | 'ORACLE' | 'PROFILE'>('STATUS');
   const [missions, setMissions] = useState<Mission[]>([]);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Tutorial hook
+  const handleTabChange = useCallback((tab: 'STATUS' | 'RANKING' | 'ORACLE' | 'PROFILE') => {
+    setActiveTab(tab);
+    setIsMobileMenuOpen(false);
+  }, []);
+
+  const tutorial = useTutorial(handleTabChange);
   
   // Loading State
   const [isLoadingData, setIsLoadingData] = useState(true);
@@ -250,6 +259,17 @@ export const Dashboard: React.FC = () => {
       document.body.style.overflow = previousOverflow;
     };
   }, [isMobileMenuOpen]);
+
+  // Inicia tutorial automaticamente para novos usuários
+  useEffect(() => {
+    if (status === 'authenticated' && !isLoadingData && !tutorial.hasSeenTutorial && !tutorial.isActive) {
+      // Pequeno delay para garantir que o DOM está pronto
+      const timer = setTimeout(() => {
+        tutorial.startTutorial();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [status, isLoadingData, tutorial]);
 
   // Handlers
   const completeMission = async (mission: Mission) => {
@@ -643,7 +663,7 @@ export const Dashboard: React.FC = () => {
             O sistema emite tarefas mensuráveis. Conclua e receba XP. Falhe e aceite a penalidade.
           </p>
 
-          <div className="mb-4 flex flex-col sm:flex-row gap-2 items-start sm:items-center justify-between border border-zinc-900 bg-zinc-950/30 p-3">
+          <div className="tutorial-auto-generate mb-4 flex flex-col sm:flex-row gap-2 items-start sm:items-center justify-between border border-zinc-900 bg-zinc-950/30 p-3">
             <div className="text-xs font-mono text-zinc-500 uppercase tracking-widest">
               Geração automática
               <span className={autoMissionGeneration ? "text-green-700 ml-2" : "text-red-700 ml-2"}>
@@ -721,7 +741,7 @@ export const Dashboard: React.FC = () => {
     );
 
     const identityCard = (
-      <div className="border border-zinc-800 p-5 sm:p-6 space-y-6 bg-black relative overflow-hidden">
+      <div id="tutorial-identity" className="border border-zinc-800 p-5 sm:p-6 space-y-6 bg-black relative overflow-hidden">
           <div className="absolute top-4 right-6 flex flex-col items-center pointer-events-none opacity-90">
             <span className="text-[10px] text-zinc-600 font-mono mb-[-5px]">RANK</span>
             <span className="text-5xl sm:text-6xl font-black text-red-900 drop-shadow-[0_0_10px_rgba(127,29,29,0.5)]">
@@ -766,7 +786,7 @@ export const Dashboard: React.FC = () => {
     );
 
     const statsPanel = (
-      <div className="space-y-2">
+      <div id="tutorial-stats" className="space-y-2">
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           {playerStats.map((stat) => (
             <div key={stat.code} className="border border-zinc-900 p-3 sm:p-4 hover:border-red-900/30 transition-colors group bg-zinc-950/30 flex flex-col items-center justify-center text-center">
@@ -787,7 +807,9 @@ export const Dashboard: React.FC = () => {
         {/* MOBILE LAYOUT: Log de missões + Drawer inferior com status */}
         <div className="lg:hidden pb-16">
           {/* Apenas o log de missões */}
-          {missionLog}
+          <div id="tutorial-missions-mobile">
+            {missionLog}
+          </div>
           
           {/* Drawer inferior com status */}
           <div 
@@ -797,6 +819,7 @@ export const Dashboard: React.FC = () => {
           >
             {/* Handle do drawer */}
             <button
+              id="tutorial-status-drawer-handle"
               type="button"
               onClick={() => setIsMobileStatusDrawerOpen(!isMobileStatusDrawerOpen)}
               className="w-full bg-black border-t border-x border-zinc-800 rounded-t-xl py-3 px-4 flex items-center justify-between"
@@ -821,7 +844,7 @@ export const Dashboard: React.FC = () => {
             <div className="bg-black border-x border-zinc-800 max-h-[70vh] overflow-y-auto custom-scrollbar">
               <div className="p-4 space-y-4">
                 {/* Card de identidade compacto para mobile */}
-                <div className="border border-zinc-800 p-4 space-y-4 bg-zinc-950/50">
+                <div id="tutorial-identity-mobile" className="border border-zinc-800 p-4 space-y-4 bg-zinc-950/50">
                   <div className="flex justify-between items-start">
                     <div className="space-y-1 flex-1 min-w-0">
                       <span className="text-[10px] text-zinc-600 font-mono block">NOME</span>
@@ -899,7 +922,9 @@ export const Dashboard: React.FC = () => {
           </div>
 
           <div className="lg:col-span-8 space-y-6 flex flex-col">
-            {missionLog}
+            <div id="tutorial-missions-desktop">
+              {missionLog}
+            </div>
             {statsPanel}
           </div>
         </div>
@@ -908,7 +933,7 @@ export const Dashboard: React.FC = () => {
   };
 
   const renderRanking = () => (
-    <div className="w-full max-w-4xl mx-auto animate-in fade-in zoom-in-95 duration-500">
+    <div id="tutorial-ranking-content" className="w-full max-w-4xl mx-auto animate-in fade-in zoom-in-95 duration-500">
       <div className="mb-8 border-l-4 border-red-800 pl-4">
         <h2 className="text-3xl font-bold text-zinc-100 uppercase tracking-tighter">Classificação Global</h2>
         <p className="text-zinc-500 font-mono text-sm mt-1">Comparando seu poder insignificante com a elite.</p>
@@ -1018,7 +1043,7 @@ export const Dashboard: React.FC = () => {
   );
 
   const renderOracle = () => (
-    <div className="w-full h-[600px] border border-zinc-800 bg-black flex flex-col animate-in fade-in slide-in-from-right-4 duration-500">
+    <div id="tutorial-oracle-content" className="w-full h-[600px] border border-zinc-800 bg-black flex flex-col animate-in fade-in slide-in-from-right-4 duration-500">
       <div className="bg-zinc-900/50 p-4 border-b border-zinc-800 flex justify-between items-center">
         <div className="flex items-center gap-3">
           <Cpu className="text-red-600" size={20} />
@@ -1090,7 +1115,7 @@ export const Dashboard: React.FC = () => {
   );
 
   const renderProfile = () => (
-    <div className="max-w-3xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div id="tutorial-profile-content" className="max-w-3xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
        <div className="mb-8 text-center">
           <User size={64} className="mx-auto text-zinc-700 mb-4" />
           <h2 className="text-2xl font-bold text-zinc-100">DADOS DO RECEPTÁCULO</h2>
@@ -1235,7 +1260,7 @@ export const Dashboard: React.FC = () => {
     <div className="w-full h-[100dvh] max-w-7xl mx-auto px-4 md:px-6 flex flex-col overflow-hidden">
       
       {/* TOP NAVIGATION */}
-      <nav className="fixed top-0 w-full left-0 right-0 z-50 flex justify-center border-b border-zinc-900 bg-black/90 backdrop-blur supports-[backdrop-filter]:bg-black/70">
+      <nav id="tutorial-nav" className="fixed top-0 w-full left-0 right-0 z-50 flex justify-center border-b border-zinc-900 bg-black/90 backdrop-blur supports-[backdrop-filter]:bg-black/70">
          <div className="w-full max-w-7xl px-2 sm:px-4">
            {/* Mobile top bar */}
            <div className="flex items-center justify-between md:hidden py-3">
@@ -1408,6 +1433,25 @@ export const Dashboard: React.FC = () => {
                 <div className="text-[10px] text-zinc-600 font-mono">Dados do receptáculo</div>
               </div>
             </button>
+
+            {/* Separador */}
+            <div className="my-2 border-t border-zinc-900" />
+
+            {/* Botão Tutorial */}
+            <button
+              type="button"
+              onClick={() => {
+                setIsMobileMenuOpen(false);
+                tutorial.startTutorial();
+              }}
+              className="w-full flex items-center gap-3 px-4 py-4 border border-transparent text-left transition-colors text-zinc-300 hover:bg-zinc-900/30 hover:text-zinc-100"
+            >
+              <HelpCircle size={18} className="text-zinc-500" />
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-mono uppercase tracking-widest">Tutorial</div>
+                <div className="text-[10px] text-zinc-600 font-mono">Aprenda a usar o sistema</div>
+              </div>
+            </button>
           </div>
         </aside>
       </div>
@@ -1424,6 +1468,37 @@ export const Dashboard: React.FC = () => {
 
       {/* MISSION DETAIL MODAL */}
       {selectedMission && <MissionDetailModal mission={selectedMission} />}
+
+      {/* Tutorial Overlay */}
+      <TutorialOverlay
+        steps={tutorial.steps}
+        currentStep={tutorial.currentStep}
+        isActive={tutorial.isActive}
+        onNext={tutorial.nextStep}
+        onPrev={tutorial.prevStep}
+        onSkip={tutorial.skipTutorial}
+        onComplete={tutorial.completeTutorial}
+        onChangeTab={handleTabChange}
+      />
+
+      {/* Botão de ajuda/tutorial flutuante - apenas desktop */}
+      {!tutorial.isActive && (
+        <button
+          type="button"
+          onClick={tutorial.startTutorial}
+          className="hidden md:flex fixed bottom-6 right-6 z-40 p-4 bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-red-500 hover:border-red-900 transition-all shadow-lg group items-center justify-center"
+          aria-label="Iniciar tutorial"
+        >
+          <HelpCircle size={24} />
+          <span className="absolute right-full mr-3 top-1/2 -translate-y-1/2 px-3 py-2 bg-black border border-zinc-800 text-xs font-mono text-zinc-300 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+            Ver tutorial
+          </span>
+        </button>
+      )}
+
+      {/* Elemento invisível para passos centralizados */}
+      <div id="tutorial-welcome" className="hidden" />
+      <div id="tutorial-conclusion" className="hidden" />
 
     </div>
   );
