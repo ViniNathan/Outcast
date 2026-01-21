@@ -1118,14 +1118,29 @@ export const Dashboard: React.FC = () => {
             <label className="text-xs font-mono text-zinc-500 uppercase">Objetivo Principal</label>
             <textarea 
               value={playerTitle}
-              onChange={(e) => setPlayerTitle(e.target.value)}
-              placeholder="Defina seu objetivo principal..."
+              onChange={(e) => {
+                const value = e.target.value;
+                const objectives = value.split(',').map(s => s.trim()).filter(s => s.length > 0);
+                if (objectives.length <= 3) {
+                  setPlayerTitle(value);
+                }
+              }}
+              placeholder="Ex: Emagrecer, Estudar programação, Ler mais livros"
               rows={3}
               className="w-full bg-zinc-900/30 border border-zinc-700 p-3 text-zinc-300 focus:border-red-600 focus:bg-zinc-900/50 outline-none transition-all font-mono text-sm resize-none"
             />
-            <p className="text-[10px] font-mono text-zinc-600">
-              Seu objetivo guia a geração de missões personalizadas pelo Oráculo.
-            </p>
+            <div className="flex justify-between items-center">
+              <p className="text-[10px] font-mono text-zinc-600">
+                Defina até 3 objetivos separados por vírgula. Eles guiam a geração de missões.
+              </p>
+              <span className={`text-[10px] font-mono ${
+                playerTitle.split(',').filter(s => s.trim().length > 0).length >= 3 
+                  ? 'text-red-500' 
+                  : 'text-zinc-600'
+              }`}>
+                {playerTitle.split(',').filter(s => s.trim().length > 0).length}/3
+              </span>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-6 pt-4">
