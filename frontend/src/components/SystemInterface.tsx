@@ -235,7 +235,7 @@ export const SystemInterface: React.FC<SystemInterfaceProps> = ({ onAwaken, isFi
                    <Check size={14} className="text-red-500" /> Geração de Treino Adaptativo
                  </li>
                  <li className="flex items-center gap-3 text-sm text-zinc-300">
-                   <Check size={14} className="text-red-500" /> Ranking & Guildas Globais
+                   <Check size={14} className="text-red-500" /> Ranking Global
                  </li>
                  <li className="flex items-center gap-3 text-sm text-zinc-300">
                    <Check size={14} className="text-red-500" /> Insígnia &quot;Desperto&quot;
