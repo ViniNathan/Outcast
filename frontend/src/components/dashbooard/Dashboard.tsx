@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { PlayerStat, Mission, ChatMessage, RankEntry } from '@/types/dashboard';
 import { 
   User, AlertTriangle, Check, Trophy, MessageSquare, 
-  Activity, Settings, Send, Lock, Cpu, Share2, Menu, X
+  Activity, Settings, Send, Lock, Cpu, Share2, Menu, X, ChevronUp, ChevronDown
 } from 'lucide-react';
 import { signOut, useSession } from 'next-auth/react';
 
@@ -87,6 +87,7 @@ export const Dashboard: React.FC = () => {
   const [selectedMission, setSelectedMission] = useState<Mission | null>(null);
   const [isGeneratingMissions, setIsGeneratingMissions] = useState(false);
   const [generationMessage, setGenerationMessage] = useState('');
+  const [isMobileStatusDrawerOpen, setIsMobileStatusDrawerOpen] = useState(false);
 
   // Chat State
   const [chatInput, setChatInput] = useState('');
@@ -783,14 +784,103 @@ export const Dashboard: React.FC = () => {
 
     return (
       <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 w-full max-w-6xl mx-auto">
-        {/* MOBILE ORDER:
-            1) Log de missões
-            2) Card nome/rank/título
-            3) Pontos de status */}
-        <div className="lg:hidden space-y-4">
+        {/* MOBILE LAYOUT: Log de missões + Drawer inferior com status */}
+        <div className="lg:hidden pb-16">
+          {/* Apenas o log de missões */}
           {missionLog}
-          {identityCard}
-          {statsPanel}
+          
+          {/* Drawer inferior com status */}
+          <div 
+            className={`fixed left-0 right-0 bottom-0 z-[55] transition-transform duration-300 ease-out ${
+              isMobileStatusDrawerOpen ? 'translate-y-0' : 'translate-y-[calc(100%-56px)]'
+            }`}
+          >
+            {/* Handle do drawer */}
+            <button
+              type="button"
+              onClick={() => setIsMobileStatusDrawerOpen(!isMobileStatusDrawerOpen)}
+              className="w-full bg-black border-t border-x border-zinc-800 rounded-t-xl py-3 px-4 flex items-center justify-between"
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <User size={16} className="text-red-600" />
+                  <span className="text-sm font-bold text-zinc-200 uppercase tracking-wider">{playerName}</span>
+                </div>
+                <span className="text-xs font-mono text-zinc-500">LV.{playerLevel}</span>
+                <span className="text-lg font-black text-red-900">{playerRankLetter}</span>
+              </div>
+              <div className="flex items-center gap-2 text-zinc-500">
+                <span className="text-[10px] font-mono uppercase tracking-widest">
+                  {isMobileStatusDrawerOpen ? 'Fechar' : 'Ver Status'}
+                </span>
+                {isMobileStatusDrawerOpen ? <ChevronDown size={18} /> : <ChevronUp size={18} />}
+              </div>
+            </button>
+            
+            {/* Conteúdo do drawer */}
+            <div className="bg-black border-x border-zinc-800 max-h-[70vh] overflow-y-auto custom-scrollbar">
+              <div className="p-4 space-y-4">
+                {/* Card de identidade compacto para mobile */}
+                <div className="border border-zinc-800 p-4 space-y-4 bg-zinc-950/50">
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-1 flex-1 min-w-0">
+                      <span className="text-[10px] text-zinc-600 font-mono block">NOME</span>
+                      <span className="text-lg text-zinc-200 font-bold tracking-wide break-words leading-tight">{playerName}</span>
+                    </div>
+                    <div className="flex flex-col items-center ml-4">
+                      <span className="text-[10px] text-zinc-600 font-mono">RANK</span>
+                      <span className="text-4xl font-black text-red-900 drop-shadow-[0_0_10px_rgba(127,29,29,0.5)]">
+                        {playerRankLetter}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-4 gap-3">
+                    <div className="space-y-1">
+                      <span className="text-[10px] text-zinc-600 font-mono block">NÍVEL</span>
+                      <span className="text-lg text-zinc-300 font-mono">{playerLevel}</span>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-[10px] text-zinc-600 font-mono block">CLASSE</span>
+                      <span className="text-lg text-zinc-500 font-mono truncate block">{playerClass}</span>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-[10px] text-zinc-600 font-mono block">POSIÇÃO</span>
+                      <span className="text-lg text-zinc-300 font-mono">{playerRankingPosition ?? '--'}</span>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-[10px] text-zinc-600 font-mono block">MISSÕES</span>
+                      <span className="text-lg text-zinc-500 font-mono">
+                        {missions.filter((m) => m.status === 'PENDING').length}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1 border-t border-zinc-900 pt-3">
+                    <span className="text-[10px] text-zinc-600 font-mono block">TÍTULO</span>
+                    <span className="text-xs text-zinc-500 uppercase break-words">{playerTitle}</span>
+                  </div>
+                </div>
+
+                {/* Stats panel */}
+                <div className="space-y-2">
+                  <div className="text-[10px] text-zinc-600 font-mono uppercase tracking-widest mb-2">Atributos</div>
+                  <div className="grid grid-cols-5 gap-2">
+                    {playerStats.map((stat) => (
+                      <div key={stat.code} className="border border-zinc-900 p-2 bg-zinc-950/30 flex flex-col items-center justify-center text-center">
+                        <div className="text-[9px] text-zinc-600 font-mono mb-1">
+                          {stat.code}
+                        </div>
+                        <div className="text-xl font-bold text-zinc-300 font-mono">
+                          {String(stat.value).padStart(2, '0')}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* DESKTOP LAYOUT */}
