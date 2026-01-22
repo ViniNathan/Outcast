@@ -12,22 +12,17 @@ export function OnboardingScreen({ onComplete }: { onComplete: () => void }) {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const handleContinue = async () => {
-    console.log("[ONBOARDING] Iniciando submissão...");
     setLocalError(null);
 
     if (!nome.trim() || !idade.trim() || !objetivo.trim()) {
-      console.log("[ONBOARDING] ❌ Validação falhou: campos vazios");
       setLocalError("Preencha Nome, Idade e Objetivo para continuar.");
       return;
     }
     const idadeNum = Number(idade);
     if (!Number.isFinite(idadeNum) || idadeNum <= 0 || idadeNum > 120) {
-      console.log("[ONBOARDING] ❌ Validação falhou: idade inválida");
       setLocalError("Idade inválida.");
       return;
     }
-
-    console.log("[ONBOARDING] Dados validados:", { nome: nome.trim(), idade: idadeNum, objetivo: objetivo.trim() });
 
     setIsSubmitting(true);
 
@@ -38,32 +33,24 @@ export function OnboardingScreen({ onComplete }: { onComplete: () => void }) {
         objetivo: objetivo.trim(),
       };
       
-      console.log("[ONBOARDING] Enviando para /api/profile/sync:", JSON.stringify(payload));
-      
       const resp = await fetch('/api/profile/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
-      console.log("[ONBOARDING] Status da resposta:", resp.status);
       const responseText = await resp.text();
-      console.log("[ONBOARDING] Resposta:", responseText);
-
       if (!resp.ok) {
-        console.log("[ONBOARDING] ❌ Erro na resposta");
         setLocalError(`Erro ao criar perfil: ${responseText}`);
         setIsSubmitting(false);
         return;
       }
 
-      console.log("[ONBOARDING] ✅ Sucesso! Mostrando modal de upgrade...");
       // Sucesso - mostrar modal de upgrade antes de completar
       setIsSubmitting(false);
       setShowUpgradeModal(true);
     } catch (e) {
       const errorMsg = e instanceof Error ? e.message : String(e);
-      console.log("[ONBOARDING] ❌ Exceção capturada:", errorMsg);
       setLocalError(`Erro ao conectar com o servidor: ${errorMsg}`);
       setIsSubmitting(false);
     }

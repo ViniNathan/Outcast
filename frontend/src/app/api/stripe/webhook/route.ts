@@ -33,8 +33,6 @@ export async function POST(req: Request) {
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
-        console.log('[WEBHOOK] Checkout session completed:', session.id);
-
         // Pegar o authUserId dos metadados
         const authUserId = session.metadata?.authUserId;
         if (!authUserId) {
@@ -87,7 +85,6 @@ export async function POST(req: Request) {
           const errorText = await updateResp.text();
           console.error('[WEBHOOK ERROR] Resposta:', errorText);
         } else {
-          console.log('[WEBHOOK SUCCESS] isPremium atualizado para true');
         }
 
         break;
@@ -95,8 +92,6 @@ export async function POST(req: Request) {
 
       case 'customer.subscription.deleted': {
         const subscription = event.data.object as Stripe.Subscription;
-        console.log('[WEBHOOK] Subscription deleted:', subscription.id);
-
         // Aqui você pode implementar lógica para remover o premium quando a assinatura for cancelada
         // Isso requereria armazenar o customer_id ou subscription_id associado ao usuário
 
@@ -104,7 +99,6 @@ export async function POST(req: Request) {
       }
 
       default:
-        console.log(`[WEBHOOK] Evento não tratado: ${event.type}`);
     }
 
     return NextResponse.json({ received: true });
