@@ -33,7 +33,10 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Prisma
+# Reinstalar dependências para garantir que tudo está disponível (incluindo prisma/config)
+RUN bun install --frozen-lockfile
+
+# Prisma - usar o script do package.json que já está configurado
 RUN bun run --filter @backend/db db:generate
 
 # Build server
