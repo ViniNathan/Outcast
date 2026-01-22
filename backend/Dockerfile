@@ -30,6 +30,14 @@ RUN bun install --frozen-lockfile
 FROM base AS builder
 WORKDIR /app
 
+# Aceitar variáveis de ambiente durante o build (Railway injeta essas variáveis)
+ARG DIRECT_URL
+ARG DATABASE_URL
+
+# Tornar as variáveis disponíveis durante o build
+ENV DIRECT_URL=${DIRECT_URL}
+ENV DATABASE_URL=${DATABASE_URL}
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
