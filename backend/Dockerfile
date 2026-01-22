@@ -59,6 +59,8 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
 
+# Copiar bun.lock para garantir resolução correta de workspaces
+COPY --from=builder /app/bun.lock ./bun.lock
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/apps/server/dist ./apps/server/dist
 COPY --from=builder /app/packages ./packages
@@ -67,4 +69,4 @@ COPY --from=builder /app/apps/server/package.json ./apps/server/package.json
 
 EXPOSE 3000
 
-CMD ["bun", "run", "--filter", "server", "start"]
+CMD ["bun", "start"]

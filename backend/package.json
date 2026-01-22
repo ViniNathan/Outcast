@@ -23,6 +23,7 @@
     "dev:native": "bun run --filter native dev",
     "dev:web": "bun run --filter web dev",
     "dev:server": "bun run --filter server dev",
+    "start": "bun run --filter server start",
     "db:push": "bun run --filter @backend/db db:push",
     "db:pull": "bun run --filter @backend/db db:pull",
     "db:studio": "bun run --filter @backend/db db:studio",
