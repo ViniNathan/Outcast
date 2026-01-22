@@ -56,17 +56,19 @@ RUN bun run --filter server build
 FROM oven/bun:1 AS runner
 WORKDIR /app
 
-ENV NODE_ENV=production
+# Em produção, mas precisamos das devDeps para o build se for rodar aqui
+# ENV NODE_ENV=production 
 ENV PORT=3000
 
 # Copiar bun.lock para garantir resolução correta de workspaces
 COPY --from=builder /app/bun.lock ./bun.lock
 COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/apps/server/dist ./apps/server/dist
+# Copiar todo o código fonte dos apps e packages
+COPY --from=builder /app/apps ./apps
 COPY --from=builder /app/packages ./packages
 COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/apps/server/package.json ./apps/server/package.json
 
 EXPOSE 3000
 
-CMD ["bun", "start"]
+# Roda o build e depois inicia
+CMD bun run --filter server build && bun start
