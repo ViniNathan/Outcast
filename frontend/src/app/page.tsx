@@ -29,7 +29,6 @@ const App: React.FC = () => {
 
     // Se veio do Stripe com sucesso e está autenticado, vai direto para o dashboard
     if (isFromStripeSuccess && isAuthenticated) {
-      console.log('[PAGE] Retorno do Stripe com sucesso - indo para dashboard');
       try {
         window.localStorage.setItem('outcast_already_accessed', 'true');
       } catch (e) {
@@ -55,19 +54,14 @@ const App: React.FC = () => {
           
           if (!meResp.ok) {
             // User não existe no backend ainda - mostrar onboarding para criar o perfil
-            console.log('[PAGE] Usuário ainda não cadastrado no backend - mostrando onboarding');
             setSystemState('ONBOARDING');
           } else {
             // User existe - verificar se precisa completar onboarding
             const data = await meResp.json();
-            console.log('[PAGE] Dados do usuário:', data);
-            
             // Se não há objetivo (ou era um placeholder antigo), precisa completar onboarding
             if (!data?.objective?.description || data?.objective?.description === 'Pendente') {
-              console.log('[PAGE] Objetivo ausente/pendente - mostrando onboarding');
               setSystemState('ONBOARDING');
             } else {
-              console.log('[PAGE] Perfil completo - indo para dashboard');
               setSystemState('DASHBOARD');
             }
           }
