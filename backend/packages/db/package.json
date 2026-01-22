@@ -10,24 +10,25 @@
     }
   },
   "scripts": {
-    "db:push": "prisma db push",
-    "db:pull": "prisma db pull",
-    "db:generate": "prisma generate",
-    "db:migrate": "prisma migrate dev",
-    "db:studio": "prisma studio"
+    "db:push": "bunx prisma db push",
+    "db:pull": "bunx prisma db pull",
+    "db:generate": "bunx prisma generate",
+    "db:migrate": "bunx prisma migrate dev",
+    "db:studio": "bunx prisma studio"
   },
   "dependencies": {
     "@backend/env": "workspace:*",
     "@prisma/adapter-pg": "^7.2.0",
     "@prisma/client": "^7.2.0",
+    "@prisma/config": "^7.2.0",
     "dotenv": "catalog:",
     "pg": "^8.17.1",
+    "prisma": "^7.2.0",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@backend/config": "workspace:*",
     "@types/pg": "^8.16.0",
-    "prisma": "^7.2.0",
     "typescript": "catalog:"
   }
 }
