@@ -634,6 +634,227 @@ export const Dashboard: React.FC = () => {
 
   const renderStatus = () => {
     const pendingCount = missions.filter((m) => m.status === 'PENDING').length;
+    
+    // Versão mobile com carrossel horizontal
+    const missionLogMobile = (
+      <div className="relative overflow-hidden bg-black">
+        {/* Overlay de geração de missões */}
+        {isGeneratingMissions && (
+          <div className="absolute inset-0 z-20 bg-black/95 flex flex-col items-center justify-center gap-6 backdrop-blur-sm">
+            {/* Animação de loading */}
+            <div className="relative">
+              <div className="w-16 h-16 border-2 border-red-900/30 border-t-red-600 rounded-full animate-spin" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Cpu size={24} className="text-red-600 animate-pulse" />
+              </div>
+            </div>
+            
+            {/* Mensagem atual */}
+            <div className="text-center px-4 max-w-md">
+              <div className="text-[10px] font-mono text-zinc-600 uppercase tracking-[0.3em] mb-2">
+                SISTEMA EM OPERAÇÃO
+              </div>
+              <div className="text-sm font-mono text-red-500 animate-pulse min-h-[1.5rem]">
+                {generationMessage}
+              </div>
+            </div>
+            
+            {/* Barra de progresso indeterminada */}
+            <div className="w-48 h-1 bg-zinc-900 overflow-hidden">
+              <div 
+                className="h-full bg-red-600 w-1/3"
+                style={{ animation: 'shimmer 1.5s ease-in-out infinite' }}
+              />
+            </div>
+            
+            {/* Texto secundário */}
+            <div className="text-[10px] font-mono text-zinc-700 uppercase tracking-widest">
+              O Oráculo está deliberando...
+            </div>
+          </div>
+        )}
+
+        <div className="bg-zinc-900/50 p-3 flex justify-between items-center gap-2 shrink-0">
+            <span className="text-red-600 font-bold text-xs tracking-widest flex items-center gap-2 flex-wrap">
+              <AlertTriangle size={14} /> LOG DE MISSÕES
+            </span>
+            <span className="text-[9px] text-zinc-500 font-mono bg-zinc-900 px-2 py-1 border border-zinc-800">
+              PLAYER: {playerId ? playerId.slice(0, 6) : '---'}
+            </span>
+        </div>
+
+        <div className="p-4 flex-1 flex flex-col min-h-0">
+          <h3 className="text-xl text-zinc-100 mb-1.5 uppercase tracking-tight font-bold">Missões ativas</h3>
+          <p className="text-zinc-500 text-[10px] font-mono mb-3 border-b border-zinc-900 pb-2 leading-relaxed">
+            O sistema emite tarefas mensuráveis. Conclua e receba XP. Falhe e aceite a penalidade.
+          </p>
+
+          <div className="tutorial-auto-generate mb-3 flex flex-col gap-2 items-start justify-between border border-zinc-900 bg-zinc-950/30 p-2.5">
+            <div className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest">
+              Geração automática
+              <span className={autoMissionGeneration ? "text-green-700 ml-2" : "text-red-700 ml-2"}>
+                {autoMissionGeneration ? "ON" : "OFF"}
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => void handleToggleAutoMissions()}
+              className="px-3 py-1.5 border border-zinc-800 bg-black text-zinc-400 hover:text-red-500 hover:border-red-900 transition-colors text-[10px] font-mono uppercase tracking-widest"
+            >
+              Alternar
+            </button>
+          </div>
+
+          {/* Carrossel horizontal de missões - Mobile */}
+          <div 
+            className="flex-1 overflow-x-auto custom-scrollbar -mx-4 px-4 min-h-0" 
+            style={{ 
+              scrollSnapType: 'x mandatory',
+              WebkitOverflowScrolling: 'touch',
+              scrollbarWidth: 'thin'
+            }}
+          >
+            <div className="flex gap-4 pb-4" style={{ width: 'max-content' }}>
+              {missions.map((mission) => {
+                const percent = mission.progressTarget > 0 ? (mission.progressCurrent / mission.progressTarget) * 100 : 0;
+                const isCompleted = mission.status === 'COMPLETED';
+                const isPending = mission.status === 'PENDING';
+                const isFailed = mission.status === 'FAILED' || mission.status === 'EXPIRED';
+                const expiresDate = new Date(mission.expiresAt);
+                const now = new Date();
+                const timeLeft = expiresDate.getTime() - now.getTime();
+                const daysLeft = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+                const hoursLeft = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                
+                return (
+                  <div 
+                    key={mission.id} 
+                    onClick={() => setSelectedMission(mission)}
+                    className={`group select-none transition-all duration-300 cursor-pointer bg-zinc-950/50 border-2 flex-shrink-0 ${
+                      isCompleted 
+                        ? 'border-zinc-800 opacity-60' 
+                        : isFailed 
+                        ? 'border-zinc-800 opacity-70' 
+                        : 'border-zinc-800 hover:border-red-900/50'
+                    } p-4 rounded-sm`}
+                    style={{ 
+                      scrollSnapAlign: 'start', 
+                      scrollSnapStop: 'always',
+                      width: 'calc(100vw - 4rem)',
+                      maxWidth: '400px',
+                      minWidth: '300px'
+                    }}
+                  >
+                    {/* Header do card */}
+                    <div className="flex items-start justify-between gap-2 mb-3">
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-base font-bold text-zinc-200 tracking-wide mb-1.5 group-hover:text-red-500 transition-colors break-words">
+                          {mission.title}
+                        </h4>
+                        <div className="flex flex-wrap gap-1.5 mb-1.5">
+                          <span className={`px-2 py-1 text-[10px] font-mono border ${
+                            mission.category === 'DAILY' ? 'border-blue-800 text-blue-500' :
+                            mission.category === 'WEEKLY' ? 'border-yellow-800 text-yellow-500' :
+                            'border-red-800 text-red-500'
+                          }`}>
+                            {mission.category}
+                          </span>
+                          <span className="px-2 py-1 text-[10px] font-mono border border-zinc-800 text-zinc-500">
+                            RANK {mission.difficulty}
+                          </span>
+                          <span className={`px-2 py-1 text-[10px] font-mono border ${
+                            isPending ? 'border-green-900 text-green-500' : 'border-zinc-800 text-zinc-600'
+                          }`}>
+                            {mission.status}
+                          </span>
+                        </div>
+                      </div>
+                      <div 
+                        className={`w-7 h-7 border-2 flex items-center justify-center transition-colors shrink-0 ${
+                          isCompleted ? 'bg-zinc-800 border-zinc-600' : 'border-zinc-700 bg-black group-hover:border-red-600'
+                        }`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (isPending) void completeMission(mission);
+                        }}
+                      >
+                        {isCompleted && <Check size={14} className="text-zinc-400" />}
+                      </div>
+                    </div>
+
+                    {/* Descrição */}
+                    <p className="text-xs text-zinc-400 mb-3 line-clamp-2 leading-relaxed">
+                      {mission.description}
+                    </p>
+
+                    {/* Progresso */}
+                    <div className="mb-3">
+                      <div className="flex justify-between text-[10px] font-mono text-zinc-500 mb-1.5">
+                        <span>Progresso</span>
+                        <span>{mission.progressCurrent}/{mission.progressTarget} {mission.progressUnit}</span>
+                      </div>
+                      <div className="h-2.5 w-full bg-zinc-950 border border-zinc-900 relative overflow-hidden">
+                        <div 
+                          className={`h-full transition-all duration-500 ease-out ${isCompleted ? 'bg-zinc-600' : 'bg-red-900'}`}
+                          style={{ width: `${percent}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Recompensas e Prazo */}
+                    <div className="grid grid-cols-2 gap-2 mb-3">
+                      <div className="bg-green-950/20 border border-green-900/30 p-2">
+                        <div className="text-[9px] text-green-700 font-mono mb-0.5">XP GANHO</div>
+                        <div className="text-lg font-bold text-green-500">+{mission.xpReward}</div>
+                      </div>
+                      <div className="bg-red-950/20 border border-red-900/30 p-2">
+                        <div className="text-[9px] text-red-700 font-mono mb-0.5">XP PENALIDADE</div>
+                        <div className="text-lg font-bold text-red-500">-{mission.xpPenalty}</div>
+                      </div>
+                    </div>
+
+                    {/* Prazo */}
+                    {isPending && (
+                      <div className="bg-zinc-950/50 border border-zinc-900 p-2 mb-2">
+                        <div className="text-[9px] font-mono text-zinc-600 uppercase mb-0.5">Prazo</div>
+                        <div className="text-xs font-mono text-zinc-300">
+                          {timeLeft > 0 ? (
+                            <>
+                              {daysLeft > 0 && <span>{daysLeft}d </span>}
+                              {hoursLeft}h restantes
+                            </>
+                          ) : (
+                            <span className="text-red-500">EXPIRADO</span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Stat Reward */}
+                    {mission.statRewardCode && mission.statRewardValue && (
+                      <div className="bg-purple-950/20 border border-purple-900/30 p-2">
+                        <div className="text-[9px] text-purple-700 font-mono mb-0.5">ATRIBUTO BÔNUS</div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold text-purple-400">{mission.statRewardCode}</span>
+                          <span className="text-lg font-bold text-purple-300">+{mission.statRewardValue}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+        <div className="bg-red-950/5 border-t border-red-900/20 p-3 text-center shrink-0">
+          <span className="text-[10px] text-red-800 font-mono uppercase animate-pulse font-bold tracking-widest">
+            Missões pendentes: {pendingCount}
+          </span>
+        </div>
+      </div>
+    );
+
+    // Versão desktop (mantém o layout original)
     const missionLog = (
       <div className="border border-zinc-800 relative overflow-hidden bg-black">
         {/* Overlay de geração de missões */}
@@ -834,26 +1055,27 @@ export const Dashboard: React.FC = () => {
     );
 
     return (
-      <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 w-full max-w-6xl mx-auto">
+      <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 w-full max-w-6xl mx-auto h-full lg:h-auto flex flex-col">
         {/* MOBILE LAYOUT: Log de missões + Drawer inferior com status */}
-        <div className="lg:hidden pb-16">
+        <div className="lg:hidden h-full flex flex-col relative">
           {/* Apenas o log de missões */}
-          <div id="tutorial-missions-mobile">
-            {missionLog}
+          <div id="tutorial-missions-mobile" className="flex-1 flex flex-col min-h-0">
+            {missionLogMobile}
           </div>
           
           {/* Drawer inferior com status */}
           <div 
-            className={`fixed left-0 right-0 bottom-0 z-[55] transition-transform duration-300 ease-out ${
+            className={`fixed left-0 right-0 bottom-0 z-[55] transition-transform duration-300 ease-out h-full flex flex-col ${
               isMobileStatusDrawerOpen ? 'translate-y-0' : 'translate-y-[calc(100%-56px)]'
             }`}
+            style={{ maxHeight: '100dvh' }}
           >
             {/* Handle do drawer */}
             <button
               id="tutorial-status-drawer-handle"
               type="button"
               onClick={() => setIsMobileStatusDrawerOpen(!isMobileStatusDrawerOpen)}
-              className="w-full bg-black border-t border-x border-zinc-800 rounded-t-xl py-3 px-4 flex items-center justify-between"
+              className="w-full bg-black border-t border-x border-zinc-800 rounded-t-xl py-2.5 px-4 flex items-center justify-between shrink-0"
             >
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2">
@@ -872,8 +1094,8 @@ export const Dashboard: React.FC = () => {
             </button>
             
             {/* Conteúdo do drawer */}
-            <div className="bg-black border-x border-zinc-800 max-h-[70vh] overflow-y-auto custom-scrollbar">
-              <div className="p-4 space-y-4">
+            <div className="bg-black border-x border-zinc-800 flex-1 overflow-y-auto custom-scrollbar min-h-0">
+              <div className="p-4 space-y-3">
                 {/* Card de identidade compacto para mobile */}
                 <div id="tutorial-identity-mobile" className="border border-zinc-800 p-4 space-y-4 bg-zinc-950/50">
                   <div className="flex justify-between items-start">
@@ -978,14 +1200,14 @@ export const Dashboard: React.FC = () => {
   };
 
   const renderRanking = () => (
-    <div id="tutorial-ranking-content" className="w-full max-w-4xl mx-auto animate-in fade-in zoom-in-95 duration-500">
-      <div className="mb-8 border-l-4 border-red-800 pl-4">
-        <h2 className="text-3xl font-bold text-zinc-100 uppercase tracking-tighter">Classificação Global</h2>
-        <p className="text-zinc-500 font-mono text-sm mt-1">Comparando seu poder insignificante com a elite.</p>
+    <div id="tutorial-ranking-content" className="w-full max-w-4xl mx-auto animate-in fade-in zoom-in-95 duration-500 h-full lg:h-auto flex flex-col lg:block overflow-hidden">
+      <div className="mb-4 lg:mb-8 border-l-4 border-red-800 pl-4 shrink-0">
+        <h2 className="text-xl lg:text-3xl font-bold text-zinc-100 uppercase tracking-tighter">Classificação Global</h2>
+        <p className="text-zinc-500 font-mono text-xs lg:text-sm mt-1">Comparando seu poder insignificante com a elite.</p>
       </div>
 
       {/* SHARE CARD SECTION */}
-      <div className="mb-12 grid grid-cols-1 md:grid-cols-2 gap-8 items-center bg-zinc-900/10 p-6 border border-zinc-800/50">
+      <div className="mb-4 lg:mb-12 grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-8 items-center bg-zinc-900/10 p-4 lg:p-6 border border-zinc-800/50 shrink-0">
          
          {/* THE CARD */}
          <div className="relative aspect-[1.58/1] bg-black border border-zinc-800 p-6 flex flex-col justify-between overflow-hidden group hover:border-red-900/50 transition-colors shadow-2xl">
@@ -1061,8 +1283,8 @@ export const Dashboard: React.FC = () => {
          </div>
       </div>
 
-      <div className="border border-zinc-800 bg-black">
-        <div className="grid grid-cols-12 gap-4 p-4 border-b border-zinc-800 bg-zinc-900/50 text-[10px] font-mono text-zinc-500 uppercase tracking-widest">
+      <div className="border border-zinc-800 bg-black flex-1 overflow-y-auto custom-scrollbar min-h-0">
+        <div className="grid grid-cols-12 gap-2 lg:gap-4 p-2 lg:p-4 border-b border-zinc-800 bg-zinc-900/50 text-[9px] lg:text-[10px] font-mono text-zinc-500 uppercase tracking-widest sticky top-0 z-10">
           <div className="col-span-2">Rank</div>
           <div className="col-span-6">Hunter</div>
           <div className="col-span-2">Level</div>
@@ -1072,11 +1294,11 @@ export const Dashboard: React.FC = () => {
         {ranking.map((entry) => (
           <div 
             key={entry.rank} 
-            className={`grid grid-cols-12 gap-4 p-4 border-b border-zinc-900 items-center ${
+            className={`grid grid-cols-12 gap-2 lg:gap-4 p-2 lg:p-4 border-b border-zinc-900 items-center ${
               entry.isUser ? 'bg-red-950/10 border-red-900/30' : 'hover:bg-zinc-900/20'
             }`}
           >
-            <div className="col-span-2 font-bold font-mono text-lg">
+            <div className="col-span-2 font-bold font-mono text-sm lg:text-lg">
               {entry.rank === 1 ? <span className="text-yellow-500">#1</span> : 
                entry.isUser ? <span className="text-red-600">#{entry.rank}</span> : 
                <span className="text-zinc-600">#{entry.rank}</span>}
@@ -1095,7 +1317,7 @@ export const Dashboard: React.FC = () => {
   );
 
   const renderOracle = () => (
-    <div id="tutorial-oracle-content" className="w-full h-[600px] border border-zinc-800 bg-black flex flex-col animate-in fade-in slide-in-from-right-4 duration-500">
+    <div id="tutorial-oracle-content" className="w-full h-full lg:h-[600px] lg:max-h-[80vh] border border-zinc-800 bg-black flex flex-col animate-in fade-in slide-in-from-right-4 duration-500">
       <div className="bg-zinc-900/50 p-4 border-b border-zinc-800 flex justify-between items-center">
         <div className="flex items-center gap-3">
           <Cpu className="text-red-600" size={20} />
@@ -1167,14 +1389,15 @@ export const Dashboard: React.FC = () => {
   );
 
   const renderProfile = () => (
-    <div id="tutorial-profile-content" className="max-w-3xl mx-auto w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
-       <div className="mb-8 text-center">
-          <User size={64} className="mx-auto text-zinc-700 mb-4" />
-          <h2 className="text-2xl font-bold text-zinc-100">DADOS DO RECEPTÁCULO</h2>
-          <p className="text-zinc-600 font-mono text-sm mt-2">Permissão limitada de edição concedida.</p>
+    <div id="tutorial-profile-content" className="max-w-3xl mx-auto w-full h-full lg:h-auto lg:max-h-[85vh] flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-500 overflow-hidden">
+       <div className="mb-4 lg:mb-8 text-center shrink-0">
+          <User size={48} className="mx-auto text-zinc-700 mb-2 lg:mb-4 lg:hidden" />
+          <User size={64} className="mx-auto text-zinc-700 mb-4 hidden lg:block" />
+          <h2 className="text-xl lg:text-2xl font-bold text-zinc-100">DADOS DO RECEPTÁCULO</h2>
+          <p className="text-zinc-600 font-mono text-xs lg:text-sm mt-2">Permissão limitada de edição concedida.</p>
        </div>
 
-       <div className="space-y-6 border border-zinc-800 p-8 bg-black">
+       <div className="space-y-4 lg:space-y-6 border border-zinc-800 p-4 lg:p-8 bg-black flex-1 overflow-y-auto custom-scrollbar min-h-0">
           {loadError ? (
             <div className="border border-red-900/40 bg-red-950/20 p-3 text-sm text-red-400 font-mono">
               Falha ao carregar dados do backend.
@@ -1509,8 +1732,8 @@ export const Dashboard: React.FC = () => {
       </div>
 
       {/* CONTENT AREA */}
-      <main className="flex-1 pt-16 md:pt-14 overflow-y-auto custom-scrollbar flex flex-col">
-        <div className="py-4 md:py-8 flex-1 flex flex-col justify-center">
+      <main className="flex-1 pt-16 md:pt-14 md:overflow-y-auto md:custom-scrollbar flex flex-col overflow-hidden">
+        <div className="h-full flex flex-col lg:justify-center lg:py-8">
           {activeTab === 'STATUS' && renderStatus()}
           {activeTab === 'RANKING' && renderRanking()}
           {activeTab === 'ORACLE' && renderOracle()}
