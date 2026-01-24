@@ -1,3 +1,5 @@
+import { FocusRail } from '@/components/UI/focus-rail';
+import { AnimatePresence, motion } from 'framer-motion';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { PlayerStat, Mission, ChatMessage, RankEntry } from '@/types/dashboard';
 import { 
@@ -102,6 +104,11 @@ export const Dashboard: React.FC = () => {
   const [isGeneratingMissions, setIsGeneratingMissions] = useState(false);
   const [generationMessage, setGenerationMessage] = useState('');
   const [isMobileStatusDrawerOpen, setIsMobileStatusDrawerOpen] = useState(false);
+
+  // New Missions UI State
+  const [showNewMissionsOverlay, setShowNewMissionsOverlay] = useState(false);
+  const [showNewMissionsCarousel, setShowNewMissionsCarousel] = useState(false);
+  const [newlyGeneratedMissions, setNewlyGeneratedMissions] = useState<Mission[]>([]);
 
   // Chat State
   const [chatInput, setChatInput] = useState('');
@@ -464,6 +471,17 @@ export const Dashboard: React.FC = () => {
         if (data?.missions && data.missions.length > 0) {
           missionsCount = data.missions.length;
           responseMessage = data.message || `${missionsCount} nova(s) missão(ões) criada(s)`;
+          
+          // Trigger new missions UI
+          setNewlyGeneratedMissions(data.missions);
+          // Wait for user to read the message before showing the overlay
+          setTimeout(() => {
+            setShowNewMissionsOverlay(true);
+            setTimeout(() => {
+              setShowNewMissionsOverlay(false);
+              setShowNewMissionsCarousel(true);
+            }, 3000);
+          }, 3000); // 3 seconds delay for user to read message
         } else if (data?.skipped) {
           responseMessage = `Geração ignorada: ${data.reason || 'motivo desconhecido'}`;
         }
@@ -1863,6 +1881,144 @@ export const Dashboard: React.FC = () => {
           }
         }}
       />
+
+      {/* New Missions Fullscreen Overlay */}
+      <AnimatePresence>
+        {showNewMissionsOverlay && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black flex items-center justify-center flex-col gap-8"
+          >
+            <motion.h1 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.2, duration: 0.5 }}
+              className="text-4xl md:text-6xl font-black text-red-600 tracking-tighter text-center px-4"
+            >
+              NOVAS MISSÕES
+              <br />
+              <span className="text-white">FORAM DEFINIDAS</span>
+            </motion.h1>
+            <motion.div 
+              initial={{ width: 0 }}
+              animate={{ width: "200px" }}
+              transition={{ delay: 0.5, duration: 0.8 }}
+              className="h-1 bg-red-600"
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* New Missions Carousel Modal */}
+      <AnimatePresence>
+        {showNewMissionsCarousel && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[90] bg-black/95 flex flex-col"
+          >
+             <div className="w-full h-full relative flex flex-col">
+                <button 
+                  onClick={() => setShowNewMissionsCarousel(false)}
+                  className="absolute top-4 right-4 z-50 p-2 bg-zinc-900/50 hover:bg-red-900/50 rounded-full text-zinc-400 hover:text-white border border-zinc-800 transition-colors"
+                >
+                  <X size={24} />
+                </button>
+                
+                <div className="text-center pt-8 pb-4 shrink-0 px-4">
+                  <h2 className="text-xl md:text-3xl font-bold text-white tracking-widest uppercase">Diretrizes Atualizadas</h2>
+                </div>
+                
+                <div className="flex-1 min-h-0 relative">
+                  <FocusRail 
+                    className="h-full"
+                    items={newlyGeneratedMissions.map((mission) => ({
+                      id: mission.id,
+                      title: mission.title,
+                      description: mission.description,
+                      meta: `RANK ${mission.difficulty} • ${mission.category}`,
+                      content: (
+                        <div className="h-full w-full bg-zinc-950 border-2 border-zinc-800 p-4 md:p-6 flex flex-col relative overflow-hidden group-hover:border-red-900/50 transition-colors">
+                            {/* Decorative background elements */}
+                            <div className="absolute top-[-10%] right-[-10%] opacity-[0.03] pointer-events-none rotate-12">
+                               <Trophy size={180} />
+                            </div>
+                            
+                            {/* Header */}
+                            <div className="relative z-10 mb-3 shrink-0">
+                                <div className="flex gap-2 mb-2 flex-wrap">
+                                    <span className={`px-2 py-1 text-[10px] font-mono border ${
+                                        mission.category === 'DAILY' ? 'border-blue-800 text-blue-500' :
+                                        mission.category === 'WEEKLY' ? 'border-yellow-800 text-yellow-500' :
+                                        'border-red-800 text-red-500'
+                                    }`}>
+                                        {mission.category}
+                                    </span>
+                                    <span className="px-2 py-1 text-[10px] font-mono border border-zinc-800 text-zinc-500">
+                                        RANK {mission.difficulty}
+                                    </span>
+                                </div>
+                                <h3 className="text-lg md:text-2xl font-bold text-zinc-100 uppercase tracking-tight leading-tight line-clamp-2">
+                                    {mission.title}
+                                </h3>
+                            </div>
+
+                            {/* Description */}
+                            <div className="relative z-10 flex-1 min-h-0 mb-4 overflow-y-auto custom-scrollbar">
+                                <p className="text-xs md:text-sm text-zinc-400 font-mono leading-relaxed">
+                                    {mission.description}
+                                </p>
+                            </div>
+
+                            {/* Footer / Rewards */}
+                            <div className="relative z-10 mt-auto space-y-3 shrink-0">
+                                {/* Progress */}
+                                <div>
+                                    <div className="flex justify-between text-[10px] font-mono text-zinc-500 mb-1">
+                                        <span>META</span>
+                                        <span>{mission.progressTarget} {mission.progressUnit}</span>
+                                    </div>
+                                    <div className="h-1.5 w-full bg-zinc-900 overflow-hidden border border-zinc-800">
+                                        <div className="h-full bg-red-900 w-0" />
+                                    </div>
+                                </div>
+
+                                {/* Rewards Grid */}
+                                <div className="grid grid-cols-2 gap-2">
+                                    <div className="bg-zinc-900/50 border border-zinc-800 p-2 text-center">
+                                        <div className="text-[9px] text-green-700 font-mono">XP</div>
+                                        <div className="text-sm font-bold text-green-500">+{mission.xpReward}</div>
+                                    </div>
+                                    <div className="bg-zinc-900/50 border border-zinc-800 p-2 text-center">
+                                        <div className="text-[9px] text-red-700 font-mono">PENALTY</div>
+                                        <div className="text-sm font-bold text-red-500">-{mission.xpPenalty}</div>
+                                    </div>
+                                </div>
+                                
+                                {mission.statRewardCode && (
+                                    <div className="bg-purple-950/20 border border-purple-900/30 p-2 flex items-center justify-between">
+                                        <span className="text-[9px] text-purple-700 font-mono">BÔNUS</span>
+                                        <span className="text-xs font-bold text-purple-400">
+                                            {mission.statRewardCode} +{mission.statRewardValue}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                      )
+                    }))}
+                    autoPlay={false}
+                    loop={true}
+                    onClose={() => setShowNewMissionsCarousel(false)}
+                  />
+                </div>
+             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   );
