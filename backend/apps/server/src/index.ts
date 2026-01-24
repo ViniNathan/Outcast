@@ -45,6 +45,10 @@ const failMissionSchema = z.object({
   missionId: z.string().min(1),
 });
 
+const uncompleteMissionSchema = z.object({
+  missionId: z.string().min(1),
+});
+
 const updateMissionProgressSchema = z.object({
   missionId: z.string().min(1),
   current: z.coerce.number().int().nonnegative(),
@@ -926,6 +930,101 @@ new Elysia()
             playerId: mission.playerId,
             message: `Missao falhou: ${mission.title}`,
             type: LOG_TYPES.FAILURE,
+          },
+        });
+
+        const ranking = await recalculateRanking();
+        const playerRanking = ranking.find(
+          (entry: { playerId: string; position: number }) =>
+            entry.playerId === mission.playerId,
+        );
+
+        if (playerRanking) {
+          await prisma.ranking.create({
+            data: {
+              playerId: mission.playerId,
+              position: playerRanking.position,
+              snapshotDate: new Date(),
+            },
+          });
+        }
+
+        return {
+          mission: updatedMission,
+          player: updatedPlayer,
+          ranking: playerRanking ?? null,
+        };
+      })
+      .post("/missions/uncomplete", async (context) => {
+        const parsed = uncompleteMissionSchema.safeParse(context.body);
+
+        if (!parsed.success) {
+          context.set.status = 400;
+          return { error: parsed.error.flatten() };
+        }
+
+        const { missionId } = parsed.data;
+        const mission = await prisma.mission.findUnique({
+          where: { id: missionId },
+          include: { player: true },
+        });
+
+        if (!mission) {
+          context.set.status = 404;
+          return { error: "Missao nao encontrada" };
+        }
+
+        if (mission.status !== "COMPLETED") {
+          return { mission };
+        }
+
+        // Reverter o XP ganho
+        const xpToReverse = mission.xpReward;
+        const updatedProgress = applyXpDelta(mission.player.xp, -xpToReverse);
+
+        // Reverter stats se a missão tiver recompensa de stats
+        let currentAttributes = (mission.player.attributes as Record<string, number> | null) || {
+          FOR: 10,
+          AGI: 10,
+          VIT: 10,
+          INT: 10,
+          SEN: 10,
+        };
+
+        if (mission.statRewardCode && mission.statRewardValue) {
+          const code = mission.statRewardCode;
+          currentAttributes = {
+            ...currentAttributes,
+            [code]: Math.max(10, (currentAttributes[code] || 10) - mission.statRewardValue),
+          };
+        }
+
+        const updatedMission = await prisma.mission.update({
+          where: { id: mission.id },
+          data: { status: "PENDING", completedAt: null },
+        });
+
+        const updatedPlayer = await prisma.player.update({
+          where: { id: mission.playerId },
+          data: {
+            xp: updatedProgress.xp,
+            level: updatedProgress.level,
+            class: updatedProgress.class,
+            attributes: currentAttributes,
+            lastActiveAt: new Date(),
+          },
+        });
+
+        const logMessages = [`Missao desconcluida: ${mission.title}`];
+        if (mission.statRewardCode && mission.statRewardValue) {
+          logMessages.push(`-${mission.statRewardValue} ${mission.statRewardCode}`);
+        }
+
+        await prisma.systemLog.create({
+          data: {
+            playerId: mission.playerId,
+            message: logMessages.join(" | "),
+            type: LOG_TYPES.INFO,
           },
         });
 

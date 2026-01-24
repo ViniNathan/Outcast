@@ -341,6 +341,69 @@ export const Dashboard: React.FC = () => {
     }
   };
 
+  const uncompleteMission = async (mission: Mission) => {
+    if (mission.status !== 'COMPLETED') return;
+    
+    // Optimistic update - atualiza UI imediatamente
+    setMissions(prev => prev.map(m => 
+      m.id === mission.id ? { ...m, status: 'PENDING' as const, completedAt: null } : m
+    ));
+    
+    try {
+      const resp = await fetch('/api/missions/uncomplete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ missionId: mission.id }),
+      });
+      
+      if (!resp.ok) {
+        // Reverter em caso de erro
+        setMissions(prev => prev.map(m => 
+          m.id === mission.id ? { ...m, status: 'COMPLETED' as const, completedAt: mission.completedAt } : m
+        ));
+        console.error('Erro ao desconc­luir missão');
+        return;
+      }
+
+      // Atualiza dados completos do servidor em background
+      const [missionsResp, meResp] = await Promise.all([
+        fetch('/api/missions?limit=100', { cache: 'no-store' }),
+        fetch('/api/dashboard/me', { cache: 'no-store' })
+      ]);
+
+      if (missionsResp.ok) {
+        const m = (await missionsResp.json()) as BackendMissionsResponse;
+        setMissions(m.missions ?? []);
+      }
+
+      if (meResp.ok) {
+        const me = (await meResp.json()) as BackendMeResponse;
+        setPlayerLevel(me.player.level);
+        setPlayerClass(me.player.class);
+        setPlayerRankLetter(rankLetterForLevel(me.player.level));
+        setPlayerRankingPosition(me.ranking?.position ?? null);
+        
+        // Atualizar stats
+        const backendAttributes = me.player.attributes as Record<string, number> | null;
+        if (backendAttributes) {
+          setPlayerStats([
+            { label: 'FORÇA', value: backendAttributes.FOR || 10, code: 'FOR' },
+            { label: 'AGILIDADE', value: backendAttributes.AGI || 10, code: 'AGI' },
+            { label: 'SENTIDOS', value: backendAttributes.SEN || 10, code: 'SEN' },
+            { label: 'VITALIDADE', value: backendAttributes.VIT || 10, code: 'VIT' },
+            { label: 'INTELIG', value: backendAttributes.INT || 10, code: 'INT' },
+          ]);
+        }
+      }
+    } catch (error) {
+      // Reverter em caso de erro
+      setMissions(prev => prev.map(m => 
+        m.id === mission.id ? { ...m, status: 'COMPLETED' as const, completedAt: mission.completedAt } : m
+      ));
+      console.error('Erro ao desconcluir missão:', error);
+    }
+  };
+
   const handleSelectTab = (tab: 'STATUS' | 'RANKING' | 'ORACLE' | 'PROFILE') => {
     // Bloquear Ranking e Oráculo para usuários free
     if (!isPremium && (tab === 'RANKING' || tab === 'ORACLE')) {
@@ -771,11 +834,12 @@ export const Dashboard: React.FC = () => {
                       </div>
                       <div 
                         className={`w-7 h-7 border-2 flex items-center justify-center transition-colors shrink-0 ${
-                          isCompleted ? 'bg-zinc-800 border-zinc-600' : 'border-zinc-700 bg-black group-hover:border-red-600'
+                          isCompleted ? 'bg-zinc-800 border-zinc-600 hover:border-red-600 cursor-pointer' : 'border-zinc-700 bg-black group-hover:border-red-600'
                         }`}
                         onClick={(e) => {
                           e.stopPropagation();
                           if (isPending) void completeMission(mission);
+                          else if (isCompleted) void uncompleteMission(mission);
                         }}
                       >
                         {isCompleted && <Check size={14} className="text-zinc-400" />}
@@ -942,11 +1006,12 @@ export const Dashboard: React.FC = () => {
                     <span className="text-sm text-zinc-300 font-bold tracking-wider flex items-center gap-3 group-hover:text-red-500 transition-colors break-words">
                       <div 
                         className={`w-5 h-5 border flex items-center justify-center transition-colors shrink-0 ${
-                          isCompleted ? 'bg-zinc-800 border-zinc-600' : 'border-zinc-700 bg-black group-hover:border-red-600'
+                          isCompleted ? 'bg-zinc-800 border-zinc-600 hover:border-red-600 cursor-pointer' : 'border-zinc-700 bg-black group-hover:border-red-600'
                         }`}
                         onClick={(e) => {
                           e.stopPropagation();
                           if (isPending) void completeMission(mission);
+                          else if (isCompleted) void uncompleteMission(mission);
                         }}
                       >
                         {isCompleted && <Check size={12} className="text-zinc-400" />}
