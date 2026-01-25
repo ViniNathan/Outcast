@@ -108,8 +108,8 @@ const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
 const createCheckoutSchema = z.object({
   priceId: z.string().min(1),
   authUserId: z.string().min(1),
-  customerEmail: z.string().email().optional(),
-  origin: z.string().url().optional(),
+  customerEmail: z.string().optional().or(z.undefined()),
+  origin: z.string().optional().or(z.undefined()),
 });
 
 async function getRankingPosition(playerId: string) {
@@ -1117,16 +1117,61 @@ new Elysia()
         return { logs };
       })
       .post("/stripe/create-checkout", async (context) => {
-        if (!(await requireSyncSecret(context))) return { error: "Nao autorizado" };
+        console.log("[STRIPE CHECKOUT] Requisição recebida");
+        console.log("[STRIPE CHECKOUT] Headers:", Object.fromEntries(context.request.headers.entries()));
+        
+        // Verificar sync secret primeiro
+        const syncSecretCheck = await requireSyncSecret(context);
+        console.log("[STRIPE CHECKOUT] Sync secret check:", syncSecretCheck);
+        if (!syncSecretCheck) {
+          console.error("[STRIPE CHECKOUT] Sync secret inválido");
+          context.set.status = 401;
+          return { error: "Nao autorizado" };
+        }
 
-        const parsed = createCheckoutSchema.safeParse(context.body);
+        // Elysia parseia JSON automaticamente, mas vamos garantir
+        let body = context.body;
+        if (typeof body === "string") {
+          try {
+            body = JSON.parse(body);
+          } catch (e) {
+            console.error("[STRIPE CHECKOUT] Erro ao parsear JSON:", e);
+            context.set.status = 400;
+            return { error: "Body inválido" };
+          }
+        }
+
+        console.log("[STRIPE CHECKOUT] Body recebido:", JSON.stringify(body, null, 2));
+        console.log("[STRIPE CHECKOUT] Tipo do body:", typeof body);
+        
+        const parsed = createCheckoutSchema.safeParse(body);
 
         if (!parsed.success) {
+          console.error("[STRIPE CHECKOUT] Erro de validação:", JSON.stringify(parsed.error.flatten(), null, 2));
+          console.error("[STRIPE CHECKOUT] Erros detalhados:", parsed.error.errors);
           context.set.status = 400;
           return { error: parsed.error.flatten() };
         }
 
         const { priceId, authUserId, customerEmail, origin } = parsed.data;
+
+        // Limpar e validar campos opcionais
+        const cleanCustomerEmail = customerEmail && customerEmail.trim() !== "" ? customerEmail.trim() : undefined;
+        const cleanOrigin = origin && origin.trim() !== "" ? origin.trim() : undefined;
+
+        // Validar email se fornecido
+        if (cleanCustomerEmail && !cleanCustomerEmail.includes("@")) {
+          console.error("[STRIPE CHECKOUT] Email inválido:", cleanCustomerEmail);
+          context.set.status = 400;
+          return { error: "Email inválido" };
+        }
+
+        // Validar origin se fornecido
+        if (cleanOrigin && !cleanOrigin.startsWith("http://") && !cleanOrigin.startsWith("https://")) {
+          console.error("[STRIPE CHECKOUT] Origin inválido:", cleanOrigin);
+          context.set.status = 400;
+          return { error: "Origin inválido" };
+        }
 
         try {
           const checkoutSession = await stripe.checkout.sessions.create({
@@ -1138,12 +1183,12 @@ new Elysia()
                 quantity: 1,
               },
             ],
-            success_url: `${origin || env.CORS_ORIGIN}/?success=true&session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${origin || env.CORS_ORIGIN}/?canceled=true`,
+            success_url: `${cleanOrigin || env.CORS_ORIGIN}/?success=true&session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${cleanOrigin || env.CORS_ORIGIN}/?canceled=true`,
             metadata: {
               authUserId,
             },
-            customer_email: customerEmail || undefined,
+            customer_email: cleanCustomerEmail || undefined,
           });
 
           return { sessionId: checkoutSession.id, url: checkoutSession.url };

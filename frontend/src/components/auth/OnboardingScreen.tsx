@@ -158,9 +158,7 @@ export function OnboardingScreen({ onComplete }: { onComplete: () => void }) {
             const response = await fetch('/api/stripe/create-checkout', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_ID,
-              }),
+              // Não precisa enviar priceId, o servidor busca do .env
             });
 
             const data = await response.json();

@@ -4,21 +4,36 @@ import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
   try {
+    console.log("[FRONTEND STRIPE CHECKOUT] Requisição recebida");
     const session = await getServerSession(authOptions);
+    console.log("[FRONTEND STRIPE CHECKOUT] Session:", session?.user?.id ? "OK" : "NÃO AUTENTICADO");
+    
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Não autenticado." }, { status: 401 });
     }
 
-    const body = await req.json();
-    const { priceId } = body;
+    // Buscar o priceId do .env do servidor (não do cliente)
+    const priceId = process.env.STRIPE_PRICE_ID;
+    
+    console.log("[FRONTEND STRIPE CHECKOUT] PriceId do servidor:", priceId);
 
     if (!priceId) {
-      return NextResponse.json({ error: "Price ID é obrigatório." }, { status: 400 });
+      console.error("[FRONTEND STRIPE CHECKOUT] STRIPE_PRICE_ID não está configurado no .env!");
+      return NextResponse.json({ error: "Price ID não configurado." }, { status: 500 });
     }
 
     // Chamar o backend para criar a sessão de checkout
     const backendUrl = (process.env.BACKEND_URL?.trim() || "http://localhost:3000").replace(/\/+$/, "");
     const syncSecret = process.env.BACKEND_SYNC_SECRET?.trim();
+
+    const requestBody = {
+      priceId,
+      authUserId: session.user.id,
+      customerEmail: session.user.email || undefined,
+      origin: req.headers.get("origin") || process.env.NEXT_PUBLIC_APP_URL || undefined,
+    };
+
+    console.log("[STRIPE CHECKOUT] Enviando para backend:", JSON.stringify(requestBody, null, 2));
 
     const response = await fetch(`${backendUrl}/api/stripe/create-checkout`, {
       method: "POST",
@@ -26,12 +41,7 @@ export async function POST(req: Request) {
         "Content-Type": "application/json",
         ...(syncSecret ? { "x-sync-secret": syncSecret } : {}),
       },
-      body: JSON.stringify({
-        priceId,
-        authUserId: session.user.id,
-        customerEmail: session.user.email || undefined,
-        origin: req.headers.get("origin") || process.env.NEXT_PUBLIC_APP_URL,
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {
