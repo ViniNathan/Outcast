@@ -24,6 +24,7 @@
     "dotenv": "catalog:",
     "elysia": "catalog:",
     "langchain": "^1.2.10",
+    "stripe": "^20.2.0",
     "zod": "catalog:"
   },
   "devDependencies": {
