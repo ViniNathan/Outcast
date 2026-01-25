@@ -1,5 +1,3 @@
-import Stripe from 'stripe';
-
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-12-15.clover',
-});
+// Stripe foi movido para o backend
+// Este arquivo é mantido apenas para compatibilidade, mas não inicializa mais o Stripe no frontend
+export const stripe = null as any;

@@ -5,6 +5,7 @@ import { env } from "@backend/env/server";
 import { cors } from "@elysiajs/cors";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { Elysia } from "elysia";
+import Stripe from "stripe";
 import { z } from "zod";
 
 import { generateMissionProposal } from "./ai/missionChain";
@@ -99,6 +100,17 @@ async function requireSyncSecret(context: { request: Request; set: { status?: un
   }
   return true;
 }
+
+const stripe = new Stripe(env.STRIPE_SECRET_KEY, {
+  apiVersion: "2025-12-15.clover",
+});
+
+const createCheckoutSchema = z.object({
+  priceId: z.string().min(1),
+  authUserId: z.string().min(1),
+  customerEmail: z.string().email().optional(),
+  origin: z.string().url().optional(),
+});
 
 async function getRankingPosition(playerId: string) {
   const players = await prisma.player.findMany({
@@ -1103,6 +1115,117 @@ new Elysia()
         });
 
         return { logs };
+      })
+      .post("/stripe/create-checkout", async (context) => {
+        if (!(await requireSyncSecret(context))) return { error: "Nao autorizado" };
+
+        const parsed = createCheckoutSchema.safeParse(context.body);
+
+        if (!parsed.success) {
+          context.set.status = 400;
+          return { error: parsed.error.flatten() };
+        }
+
+        const { priceId, authUserId, customerEmail, origin } = parsed.data;
+
+        try {
+          const checkoutSession = await stripe.checkout.sessions.create({
+            mode: "subscription",
+            payment_method_types: ["card"],
+            line_items: [
+              {
+                price: priceId,
+                quantity: 1,
+              },
+            ],
+            success_url: `${origin || env.CORS_ORIGIN}/?success=true&session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${origin || env.CORS_ORIGIN}/?canceled=true`,
+            metadata: {
+              authUserId,
+            },
+            customer_email: customerEmail || undefined,
+          });
+
+          return { sessionId: checkoutSession.id, url: checkoutSession.url };
+        } catch (error) {
+          console.error("[STRIPE CHECKOUT ERROR]", error);
+          context.set.status = 500;
+          return { error: "Erro ao criar sessão de checkout." };
+        }
+      })
+      .post("/stripe/webhook", async (context) => {
+        const body = await context.request.text();
+        const signature = context.request.headers.get("stripe-signature");
+
+        if (!signature) {
+          context.set.status = 400;
+          return { error: "Assinatura ausente." };
+        }
+
+        const webhookSecret = env.STRIPE_WEBHOOK_SECRET;
+        if (!webhookSecret) {
+          console.error("[WEBHOOK ERROR] STRIPE_WEBHOOK_SECRET não configurado");
+          context.set.status = 500;
+          return { error: "Webhook secret não configurado." };
+        }
+
+        let event: Stripe.Event;
+
+        try {
+          event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+        } catch (err) {
+          console.error("[WEBHOOK ERROR] Verificação de assinatura falhou:", err);
+          context.set.status = 400;
+          return { error: `Webhook Error: ${err instanceof Error ? err.message : "Unknown"}` };
+        }
+
+        // Processar eventos do Stripe
+        try {
+          switch (event.type) {
+            case "checkout.session.completed": {
+              const session = event.data.object as Stripe.Checkout.Session;
+              // Pegar o authUserId dos metadados
+              const authUserId = session.metadata?.authUserId;
+              if (!authUserId) {
+                console.error("[WEBHOOK ERROR] authUserId não encontrado nos metadados");
+                break;
+              }
+
+              // Buscar o playerId
+              const user = await prisma.user.findUnique({
+                where: { authUserId },
+                include: { player: true },
+              });
+
+              if (!user?.player) {
+                console.error("[WEBHOOK ERROR] Usuário ou player não encontrado");
+                break;
+              }
+
+              // Atualizar isPremium no backend
+              await prisma.playerSettings.update({
+                where: { playerId: user.player.id },
+                data: { isPremium: true },
+              });
+
+              break;
+            }
+
+            case "customer.subscription.deleted": {
+              // Aqui você pode implementar lógica para remover o premium quando a assinatura for cancelada
+              // Isso requereria armazenar o customer_id ou subscription_id associado ao usuário
+              break;
+            }
+
+            default:
+          }
+
+          return { received: true };
+        } catch (error) {
+          console.error("[WEBHOOK ERROR] Erro ao processar evento:", error);
+          context.set.status = 500;
+          return { error: "Erro ao processar webhook." };
+        }
       }),
   )
   .get("/", () => "OK")
