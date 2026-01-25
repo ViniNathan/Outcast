@@ -466,27 +466,36 @@ export const Dashboard: React.FC = () => {
 
       let responseMessage = 'MISSÕES GERADAS';
       let missionsCount = 0;
+      let parsedMissions: Mission[] = [];
+      
       try {
         const data = JSON.parse(text) as { missions?: Mission[]; message?: string; skipped?: boolean; reason?: string };
-        if (data?.missions && data.missions.length > 0) {
+        
+        if (data?.missions && Array.isArray(data.missions) && data.missions.length > 0) {
           missionsCount = data.missions.length;
           responseMessage = data.message || `${missionsCount} nova(s) missão(ões) criada(s)`;
+          parsedMissions = data.missions;
           
-          // Trigger new missions UI
-          setNewlyGeneratedMissions(data.missions);
-          // Wait for user to read the message before showing the overlay
-          setTimeout(() => {
-            setShowNewMissionsOverlay(true);
+          // Garantir que as missões tenham os campos necessários
+          const validMissions = parsedMissions.filter(m => m && m.id && m.title);
+          if (validMissions.length > 0) {
+            // Trigger new missions UI
+            setNewlyGeneratedMissions(validMissions);
+            
+            // Wait for user to read the message before showing the overlay
             setTimeout(() => {
-              setShowNewMissionsOverlay(false);
-              setShowNewMissionsCarousel(true);
-            }, 3000);
-          }, 3000); // 3 seconds delay for user to read message
+              setShowNewMissionsOverlay(true);
+              setTimeout(() => {
+                setShowNewMissionsOverlay(false);
+                setShowNewMissionsCarousel(true);
+              }, 3000);
+            }, 3000); // 3 seconds delay for user to read message
+          }
         } else if (data?.skipped) {
           responseMessage = `Geração ignorada: ${data.reason || 'motivo desconhecido'}`;
         }
       } catch {
-        // ignore
+        // Se houver erro no parse, ainda tenta mostrar mensagem genérica
       }
 
       const sysMsg: ChatMessage = {
@@ -1931,9 +1940,10 @@ export const Dashboard: React.FC = () => {
                 </div>
                 
                 <div className="flex-1 min-h-0 relative">
-                  <FocusRail 
-                    className="h-full"
-                    items={newlyGeneratedMissions.map((mission) => ({
+                  {newlyGeneratedMissions.length > 0 ? (
+                    <FocusRail 
+                      className="h-full"
+                      items={newlyGeneratedMissions.map((mission) => ({
                       id: mission.id,
                       title: mission.title,
                       description: mission.description,
@@ -2008,10 +2018,15 @@ export const Dashboard: React.FC = () => {
                         </div>
                       )
                     }))}
-                    autoPlay={false}
-                    loop={true}
-                    onClose={() => setShowNewMissionsCarousel(false)}
-                  />
+                      autoPlay={false}
+                      loop={true}
+                      onClose={() => setShowNewMissionsCarousel(false)}
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-full">
+                      <p className="text-zinc-500 font-mono">Nenhuma missão para exibir</p>
+                    </div>
+                  )}
                 </div>
              </div>
           </motion.div>
