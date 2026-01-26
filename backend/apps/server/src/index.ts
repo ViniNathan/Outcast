@@ -9,6 +9,7 @@ import Stripe from "stripe";
 import { z } from "zod";
 
 import { generateMissionProposal } from "./ai/missionChain";
+import { generateRoast } from "./ai/roastChain";
 import {
   LOG_TYPES,
   MISSION_CATEGORIES,
@@ -21,6 +22,10 @@ import {
   calculateXpReward,
   getExpiresAtForCategory,
 } from "./game";
+
+const roastSchema = z.object({
+  weakness: z.string().min(1),
+});
 
 const createObjectiveSchema = z.object({
   userId: z.string().min(1),
@@ -358,6 +363,21 @@ new Elysia()
   })
   .group("/api", (app) =>
     app
+      .post("/roast", async (context) => {
+        if (!(await requireSyncSecret(context))) return { error: "Nao autorizado" };
+
+        const parsed = roastSchema.safeParse(context.body);
+
+        if (!parsed.success) {
+          context.set.status = 400;
+          return { error: parsed.error.flatten() };
+        }
+
+        const { weakness } = parsed.data;
+        
+        const analysis = await generateRoast(weakness);
+        return { analysis };
+      })
       .post("/objective", async (context) => {
         // Proteção simples (opcional) para evitar que qualquer origem crie registros no seu backend.
         // Configure BACKEND_SYNC_SECRET no backend e BACKEND_SYNC_SECRET no frontend (Next API proxy).

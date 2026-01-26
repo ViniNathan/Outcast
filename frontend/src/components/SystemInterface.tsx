@@ -5,6 +5,9 @@ import { MISSION_LOGS, SYSTEM_MESSAGES } from '@/utils/constants';
 import { Radio, Activity, AlertTriangle, Zap, Brain, Target, Shield, Check, X } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import { InteractiveRoast } from './landing/InteractiveRoast';
+import { SystemLog } from './landing/SystemLog';
+import { ServerCapacity } from './landing/ServerCapacity';
 
 interface SystemInterfaceProps {
   onAwaken: () => void;
@@ -68,7 +71,7 @@ export const SystemInterface: React.FC<SystemInterfaceProps> = ({ onAwaken, isFi
       </div>
       
       {/* 1. HERO SECTION */}
-      <section className="mb-32 relative border-l border-zinc-900 pl-8 md:pl-16 py-8">
+      <section className="mb-16 relative border-l border-zinc-900 pl-8 md:pl-16 py-8">
         <div className="absolute -left-[1px] top-0 h-16 w-[2px] bg-red-900" />
         
         <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-zinc-200 uppercase tracking-tighter mb-6 leading-[0.9]">
@@ -87,29 +90,32 @@ export const SystemInterface: React.FC<SystemInterfaceProps> = ({ onAwaken, isFi
         </div>
       </section>
 
-      {/* 2. MECHANICS / LOGS */}
-      <section className="mb-32 grid grid-cols-1 md:grid-cols-2 gap-12">
-        <div className="font-mono text-sm text-zinc-600 mb-4 col-span-full flex items-center gap-2 uppercase tracking-widest">
-           <Activity size={14} className="text-red-900" /> [LOGS_SISTEMA_V9]
-        </div>
+      {/* 1.5 LIVE LOGS (Social Proof) */}
+      <div className="mb-24">
+        <SystemLog />
+      </div>
 
-        <div className="col-span-full border-t border-b border-zinc-900 py-8">
-          {MISSION_LOGS.map((log) => (
-            <div key={log.id} className="group flex items-center justify-between py-4 border-b border-zinc-900/50 last:border-0 hover:bg-zinc-900/20 transition-colors cursor-default">
-              <div className="flex items-center gap-4">
-                <span className="text-xs text-zinc-700 font-mono">0{log.id}</span>
-                <span className="text-zinc-300 font-medium tracking-wide">{log.text}</span>
-              </div>
-              <span className={`text-[10px] font-mono px-2 py-1 border ${
-                log.status === 'AVISO' ? 'border-red-900/30 text-red-900' : 'border-zinc-800 text-zinc-600'
-              }`}>
-                {log.status}
+      {/* 1.8 THE HOOK - INTERACTIVE DEMO */}
+      <section className="mb-32">
+        <div className="flex flex-col items-center text-center mb-8">
+           <div className="inline-flex items-center gap-2 border border-red-900/30 px-3 py-1 bg-red-950/10 mb-4">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
               </span>
-            </div>
-          ))}
+              <span className="text-[10px] text-red-400 font-mono tracking-widest uppercase">Live Demo (Gemini v3)</span>
+           </div>
+           <h2 className="text-2xl md:text-3xl font-bold text-zinc-100 uppercase tracking-tight">Prove seu Valor</h2>
+           <p className="text-zinc-500 font-mono text-sm mt-2 max-w-lg">
+             O sistema está ouvindo. Diga sua desculpa favorita e veja como a IA reage antes de se comprometer.
+           </p>
         </div>
+        <InteractiveRoast />
       </section>
 
+      {/* 2. MECHANICS / LOGS - REPLACED BY LIVE LOG ABOVE, REMOVING OLD STATIC LOGS SECTION OR KEEPING AS FEATURE SHOWCASE? */}
+      {/* Keeping mechanics intro but removing the old static logs list since we have the live ticker now */}
+      
       {/* 3. NEW FEATURE MODULES */}
       <section className="mb-32">
         <div className="flex items-center gap-2 mb-8">
@@ -130,13 +136,14 @@ export const SystemInterface: React.FC<SystemInterfaceProps> = ({ onAwaken, isFi
               </p>
            </div>
 
-           {/* Card 2 */}
+           {/* Card 2 - MODIFIED to Reference Demo */}
            <div className="border border-zinc-800 bg-zinc-950/50 p-6 hover:border-red-900/50 transition-all group relative overflow-hidden">
                <div className="absolute top-0 right-0 p-2 opacity-20 group-hover:opacity-100 transition-opacity">
                  <Brain size={40} className="text-red-900" strokeWidth={1} />
               </div>
               <h3 className="font-mono text-red-500 mb-2 text-sm uppercase">02. Oráculo IA</h3>
               <p className="text-zinc-400 text-sm leading-relaxed">
+                <span className="text-zinc-200 block mb-2 font-bold text-xs bg-red-900/20 w-fit px-2 py-1 rounded">LIVE ACIMA ⬆</span>
                 Um treinador pessoal movido a Inteligência Artificial que analisa suas falhas, cria treinos personalizados e 
                 <span className="text-zinc-200"> humilha suas desculpas</span>.
               </p>
@@ -203,7 +210,7 @@ export const SystemInterface: React.FC<SystemInterfaceProps> = ({ onAwaken, isFi
                </ul>
 
                <button 
-            onClick={handleAccess}
+                onClick={handleAccess}
                  className="w-full py-4 border border-zinc-800 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-900 transition-colors uppercase font-mono text-xs tracking-widest"
                >
                  Iniciar Sobrevivência
@@ -221,8 +228,13 @@ export const SystemInterface: React.FC<SystemInterfaceProps> = ({ onAwaken, isFi
                </div>
                
                <h3 className="text-2xl font-bold text-red-500 mb-2 drop-shadow-md">RANK S</h3>
-               <div className="text-4xl font-bold text-white mb-6 font-mono flex items-baseline gap-2">
+               <div className="text-4xl font-bold text-white mb-2 font-mono flex items-baseline gap-2">
                  R$ 29,90<span className="text-sm text-red-400/70 font-normal">/mês</span>
+               </div>
+               
+               {/* SCARCITY COMPONENT */}
+               <div className="mb-6">
+                 <ServerCapacity />
                </div>
                
                <ul className="space-y-4 mb-8 flex-1 relative z-10">
@@ -296,7 +308,6 @@ export const SystemInterface: React.FC<SystemInterfaceProps> = ({ onAwaken, isFi
           <div className="mt-8 flex gap-8 text-zinc-800 font-mono text-[10px]">
              <span>SERVIDOR: SA_EAST_1</span>
              <span>PING: 14ms</span>
-             <span>CAPACIDADE: 94%</span>
           </div>
         </div>
       </section>
