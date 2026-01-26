@@ -134,7 +134,7 @@ export const InteractiveRoast = () => {
         </form>
         
         <div className="mt-2 text-[10px] text-zinc-600 font-mono text-right uppercase">
-           Powered by Gemini Neural Network
+           Powered by OUTCAST SYSTEM
         </div>
       </div>
     </div>

@@ -103,11 +103,11 @@ export const SystemInterface: React.FC<SystemInterfaceProps> = ({ onAwaken, isFi
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
               </span>
-              <span className="text-[10px] text-red-400 font-mono tracking-widest uppercase">Live Demo (Gemini v3)</span>
+              <span className="text-[10px] text-red-400 font-mono tracking-widest uppercase">Oráculo</span>
            </div>
            <h2 className="text-2xl md:text-3xl font-bold text-zinc-100 uppercase tracking-tight">Prove seu Valor</h2>
            <p className="text-zinc-500 font-mono text-sm mt-2 max-w-lg">
-             O sistema está ouvindo. Diga sua desculpa favorita e veja como a IA reage antes de se comprometer.
+             O sistema está ouvindo. Diga sua desculpa favorita e veja como o Oráculo reage antes de se comprometer.
            </p>
         </div>
         <InteractiveRoast />
