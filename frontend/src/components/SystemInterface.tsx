@@ -8,6 +8,8 @@ import { useRouter } from 'next/navigation';
 import { InteractiveRoast } from './landing/InteractiveRoast';
 import { SystemLog } from './landing/SystemLog';
 import { ServerCapacity } from './landing/ServerCapacity';
+import { SocialProofPopup } from './landing/SocialProofPopup'; // Imported SocialProofPopup
+
 
 interface SystemInterfaceProps {
   onAwaken: () => void;
@@ -185,52 +187,67 @@ export const SystemInterface: React.FC<SystemInterfaceProps> = ({ onAwaken, isFi
          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
             
             {/* FREE TIER */}
-            <div className="border border-zinc-800 bg-zinc-900/10 p-8 flex flex-col relative group">
+            <div className="border border-zinc-800 bg-zinc-900/10 p-8 flex flex-col relative group opacity-75 hover:opacity-100 transition-all grayscale hover:grayscale-0">
                <div className="absolute top-0 left-0 bg-zinc-800 text-black text-[10px] font-bold px-2 py-1 font-mono uppercase">
-                 Fracassado
+                 Limitado
                </div>
-               <h3 className="text-2xl font-bold text-zinc-400 mb-2">RANK E</h3>
-               <div className="text-4xl font-bold text-zinc-200 mb-6 font-mono">
-                 R$ 0<span className="text-sm text-zinc-600 font-normal">/mês</span>
+               <h3 className="text-2xl font-bold text-zinc-600 mb-2">RANK E</h3>
+               <div className="text-4xl font-bold text-zinc-500 mb-6 font-mono">
+                 R$ 0<span className="text-sm text-zinc-700 font-normal">/mês</span>
                </div>
                
                <ul className="space-y-4 mb-8 flex-1">
-                 <li className="flex items-center gap-3 text-sm text-zinc-400">
-                   <Check size={14} className="text-zinc-500" /> Missões Iniciais
+                 <li className="flex items-center gap-3 text-sm text-zinc-500">
+                   <Check size={14} className="text-zinc-700" /> Missões Iniciais
                  </li>
-                 <li className="flex items-center gap-3 text-sm text-zinc-400">
-                   <Check size={14} className="text-zinc-500" /> Status Básico
+                 <li className="flex items-center gap-3 text-sm text-zinc-500">
+                   <Check size={14} className="text-zinc-700" /> Status Básico
                  </li>
-                 <li className="flex items-center gap-3 text-sm text-zinc-600 line-through decoration-zinc-800">
+                 <li className="flex items-center gap-3 text-sm text-zinc-700 line-through decoration-zinc-800">
                    <X size={14} /> Acesso ao Oráculo IA
                  </li>
-                 <li className="flex items-center gap-3 text-sm text-zinc-600 line-through decoration-zinc-800">
+                 <li className="flex items-center gap-3 text-sm text-zinc-700 line-through decoration-zinc-800">
                    <X size={14} /> Ranking Global
                  </li>
                </ul>
 
                <button 
                 onClick={handleAccess}
-                 className="w-full py-4 border border-zinc-800 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-900 transition-colors uppercase font-mono text-xs tracking-widest"
+                 className="w-full py-4 border border-zinc-800 text-zinc-600 hover:text-zinc-400 hover:bg-zinc-900 transition-colors uppercase font-mono text-xs tracking-widest cursor-not-allowed group-hover:cursor-pointer"
                >
-                 Iniciar Sobrevivência
+                 Acesso Restrito
                </button>
             </div>
 
             {/* PRO TIER */}
-            <div className="border border-red-900 bg-red-950/10 p-8 flex flex-col relative overflow-hidden transform md:-translate-y-4">
+            <div className="border border-red-900 bg-red-950/10 p-8 flex flex-col relative overflow-hidden transform md:-translate-y-4 shadow-[0_0_50px_rgba(220,38,38,0.1)]">
                {/* Glowing Background */}
                <div className="absolute inset-0 bg-red-600/5 animate-pulse pointer-events-none" />
-               <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-red-600/20 to-transparent pointer-events-none" />
+               <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-red-600/10 to-transparent pointer-events-none" />
 
-               <div className="absolute top-0 left-0 bg-red-700 text-white text-[10px] font-bold px-2 py-1 font-mono uppercase shadow-[0_0_10px_rgba(220,38,38,0.5)]">
-                 Monarca
+               <div className="absolute top-0 left-0 bg-red-600 text-white text-[10px] font-bold px-2 py-1 font-mono uppercase shadow-[0_0_10px_rgba(220,38,38,0.5)] flex items-center gap-2">
+                 <span className="animate-pulse">●</span> RECRUTA
                </div>
                
-               <h3 className="text-2xl font-bold text-red-500 mb-2 drop-shadow-md">RANK S</h3>
-               <div className="text-4xl font-bold text-white mb-2 font-mono flex items-baseline gap-2">
-                 R$ 29,90<span className="text-sm text-red-400/70 font-normal">/mês</span>
+               <h3 className="text-2xl font-bold text-red-500 mb-1 drop-shadow-md">RANK S</h3>
+               <p className="text-xs font-mono text-red-400/50 mb-4 uppercase tracking-widest">Acesso Total Liberado</p>
+               
+               <div className="flex flex-col mb-2">
+                 <div className="text-sm text-zinc-500 font-mono line-through decoration-red-900/50 decoration-2">
+                   PADRÃO: R$ 97,90
+                 </div>
+                 <div className="text-5xl font-bold text-white font-mono flex items-baseline gap-2 text-shadow-red">
+                   R$ 29,90<span className="text-sm text-red-400/70 font-normal">/mês</span>
+                 </div>
                </div>
+
+               <div className="mb-6 inline-block">
+                 <div className="text-[10px] font-bold text-red-400 font-mono uppercase tracking-widest bg-red-950/30 px-2 py-1 border border-red-900/30 flex items-center gap-2">
+                    <AlertTriangle size={10} />
+                    <span>OFERTA DE RECRUTAMENTO</span>
+                 </div>
+               </div>
+
                
                {/* SCARCITY COMPONENT */}
                <div className="mb-6">
@@ -318,6 +335,8 @@ export const SystemInterface: React.FC<SystemInterfaceProps> = ({ onAwaken, isFi
           Outcast System © 2024. Todas as fraquezas registradas.
         </p>
       </footer>
+      
+      <SocialProofPopup />
     </div>
   );
 };
