@@ -31,7 +31,7 @@ const model = new ChatGoogleGenerativeAI({
   apiKey: env.GOOGLE_API_KEY,
   model: env.GOOGLE_MODEL ?? "gemini-1.5-flash", // Mudando para 1.5-flash por estabilidade
   temperature: 0.8,
-  maxOutputTokens: 500, // Aumentado drasticamente para evitar cortes
+  maxOutputTokens: 1000, // Aumentado drasticamente para evitar cortes
   safetySettings: [
     {
       category: HarmCategory.HARM_CATEGORY_HARASSMENT,
